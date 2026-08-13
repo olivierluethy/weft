@@ -215,6 +215,7 @@ export function Editor({
       // formatting toolbar on top of ours. Disable the two we replace below; the
       // default emoji picker (":") and side menu stay.
       slashMenu={false}
+      formattingToolbar={false}
     >
       {/* Formatting toolbar: BlockNote defaults + the per-selection font-family
        * picker (docs/STYLEGUIDE.md §3.4). */}

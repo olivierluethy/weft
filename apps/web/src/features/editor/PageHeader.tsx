@@ -16,6 +16,7 @@ import {
   Download,
   ChevronRight,
   Wallpaper,
+  MessageSquare,
 } from 'lucide-react';
 import { PAGE_WIDTH } from '@weft/shared';
 import type { PageDetail, Breadcrumb } from '@/lib/queries';
@@ -30,6 +31,7 @@ import { StatsPanel } from './StatsPanel';
 import { CustomCssModal } from './CustomCssModal';
 import { HistoryPanel } from '@/features/history/HistoryPanel';
 import { ShareDialog } from '@/features/share/ShareDialog';
+import { CommentsPanel } from '@/features/comments/CommentsPanel';
 import type { DocStats } from './stats';
 import {
   exportMarkdown,
@@ -64,6 +66,7 @@ export function PageHeader({
   const [showHistory, setShowHistory] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [showCss, setShowCss] = useState(false);
+  const [showComments, setShowComments] = useState(false);
 
   const blocks = (Array.isArray(currentContent) ? currentContent : page.content) as any[];
 
@@ -116,6 +119,9 @@ export function PageHeader({
             onClick={() => onUpdate({ isFavorite: !page.isFavorite })}
           >
             <Star size={16} className={page.isFavorite ? 'fill-madder text-madder' : ''} />
+          </IconButton>
+          <IconButton label="Comments" active={showComments} onClick={() => setShowComments((v) => !v)}>
+            <MessageSquare size={16} />
           </IconButton>
           <IconButton label="Share" onClick={() => setShowShare(true)}>
             <Share2 size={16} />
@@ -247,6 +253,7 @@ export function PageHeader({
         />
       )}
       {showShare && <ShareDialog pageId={page.id} onClose={() => setShowShare(false)} />}
+      {showComments && <CommentsPanel pageId={page.id} onClose={() => setShowComments(false)} />}
       {showCss && (
         <CustomCssModal
           initial={page.customCss}

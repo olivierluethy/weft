@@ -4,8 +4,10 @@ import { HocuspocusProvider } from '@hocuspocus/provider';
 import {
   useCreateBlockNote,
   SuggestionMenuController,
+  getDefaultReactSlashMenuItems,
   type DefaultReactSuggestionItem,
 } from '@blocknote/react';
+import { filterSuggestionItems } from '@blocknote/core';
 import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/mantine/style.css';
 import './editor.css';
@@ -15,6 +17,7 @@ import { computeStats, type DocStats } from './stats';
 import { useThemeStore } from '@/hooks/useTheme';
 import { useTree } from '@/lib/queries';
 import { weftSchema } from './mention';
+import { SlashMenu } from './SlashMenu';
 import { SNAPSHOT_DEBOUNCE_MS } from '@weft/shared';
 
 const colorFor = (id: string) => `hsl(${hashHue(id)} 55% 45%)`;
@@ -165,6 +168,15 @@ export function Editor({
       theme={effectiveTheme(theme)}
       className="weft-page-content"
     >
+      {/* Slash menu: viewport-aware (BlockNote flips it up near the bottom) and
+       * internally scrollable so every block category stays reachable. */}
+      <SuggestionMenuController
+        triggerCharacter="/"
+        getItems={async (q) =>
+          filterSuggestionItems(getDefaultReactSlashMenuItems(editor), q)
+        }
+        suggestionMenuComponent={SlashMenu}
+      />
       <SuggestionMenuController triggerCharacter="@" getItems={async (q) => getMentionItems(q)} />
     </BlockNoteView>
   );

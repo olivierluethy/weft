@@ -4,6 +4,21 @@
 
 type Inline = any;
 type Block = any;
+export type PageFont = 'serif' | 'sans' | 'mono';
+
+// Font stacks mirror the in-app page fonts (docs/STYLEGUIDE.md §3.3).
+// Headings share the page face and are distinguished by size/weight, matching
+// how the live editor renders them.
+const BODY_FONT: Record<PageFont, string> = {
+  serif: "Georgia, 'Newsreader', serif",
+  sans: "Inter, system-ui, sans-serif",
+  mono: "'JetBrains Mono', ui-monospace, monospace",
+};
+const DOCX_FONT: Record<PageFont, string> = {
+  serif: 'Georgia',
+  sans: 'Calibri',
+  mono: 'JetBrains Mono',
+};
 
 // ── Inline rendering ─────────────────────────────────────────────────────
 function inlineMd(nodes: Inline[]): string {
@@ -182,15 +197,15 @@ export function exportJson(title: string, page: unknown) {
   download(`${slug(title)}.json`, JSON.stringify(page, null, 2), 'application/json');
 }
 
-export function exportHtmlFile(title: string, blocks: Block[]) {
-  download(`${slug(title)}.html`, htmlDocument(title, blocks), 'text/html');
+export function exportHtmlFile(title: string, blocks: Block[], font: PageFont = 'serif') {
+  download(`${slug(title)}.html`, htmlDocument(title, blocks, font), 'text/html');
 }
 
-export function htmlDocument(title: string, blocks: Block[]): string {
+export function htmlDocument(title: string, blocks: Block[], font: PageFont = 'serif'): string {
   return `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title>
 <style>
-  body{font-family:Georgia,'Newsreader',serif;max-width:720px;margin:40px auto;padding:0 20px;color:#211f1c;line-height:1.6}
-  h1,h2,h3{font-family:'Space Grotesk',system-ui,sans-serif;font-weight:600;line-height:1.25}
+  body{font-family:${BODY_FONT[font]};max-width:720px;margin:40px auto;padding:0 20px;color:#211f1c;line-height:1.6}
+  h1,h2,h3{font-weight:600;line-height:1.25}
   h1{font-size:30px;letter-spacing:-.02em;margin:1.2em 0 .4em}
   h2{font-size:24px;letter-spacing:-.01em;margin:1.1em 0 .35em}
   h3{font-size:19px;letter-spacing:-.01em;margin:1em 0 .3em}
@@ -204,17 +219,17 @@ export function htmlDocument(title: string, blocks: Block[]): string {
 }
 
 /** Print-view based PDF export: opens a print-ready window and triggers print. */
-export function exportPdf(title: string, blocks: Block[]) {
+export function exportPdf(title: string, blocks: Block[], font: PageFont = 'serif') {
   const win = window.open('', '_blank');
   if (!win) return;
-  win.document.write(htmlDocument(title, blocks));
+  win.document.write(htmlDocument(title, blocks, font));
   win.document.close();
   win.focus();
   setTimeout(() => win.print(), 350);
 }
 
 /** DOCX export via the `docx` library (dynamic import to keep it out of the main bundle). */
-export async function exportDocx(title: string, blocks: Block[]) {
+export async function exportDocx(title: string, blocks: Block[], font: PageFont = 'serif') {
   const { Document, Packer, Paragraph, HeadingLevel, TextRun } = await import('docx');
   const headingFor = (lvl: number) =>
     lvl === 1 ? HeadingLevel.HEADING_1 : lvl === 2 ? HeadingLevel.HEADING_2 : HeadingLevel.HEADING_3;
@@ -240,7 +255,10 @@ export async function exportDocx(title: string, blocks: Block[]) {
   };
   walk(blocks);
 
-  const doc = new Document({ sections: [{ children: paras }] });
+  const doc = new Document({
+    styles: { default: { document: { run: { font: DOCX_FONT[font] } } } },
+    sections: [{ children: paras }],
+  });
   const blob = await Packer.toBlob(doc);
   download(`${slug(title)}.docx`, blob, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
 }

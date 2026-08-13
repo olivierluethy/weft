@@ -63,7 +63,21 @@
   --h3-lh: 28px;
   --h-weight: 600;
 
+  /* Page body face (per-page font family, see docs/STYLEGUIDE.md §3.3).
+   * Default = Newsreader serif; overridden per page by [data-page-font]. */
+  --wf-body-font: Newsreader, Georgia, serif;
+  --wf-mono-font: 'JetBrains Mono', ui-monospace, monospace;
+
   color-scheme: light;
+}
+
+/* Per-page font family. `serif` is the default (no override); the page
+ * container carries data-page-font and the value inherits into the editor. */
+[data-page-font='sans'] {
+  --wf-body-font: Inter, system-ui, sans-serif;
+}
+[data-page-font='mono'] {
+  --wf-body-font: var(--wf-mono-font);
 }
 
 :root:not([data-theme='light']) {

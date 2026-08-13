@@ -9,7 +9,7 @@
 .weft-page-content .bn-editor {
   padding-inline: 0;
   background: transparent;
-  font-family: Newsreader, Georgia, serif;
+  font-family: var(--wf-body-font);
 }
 
 /* The editor content must sit flat like Notion — no container border and no
@@ -39,7 +39,7 @@
 
 .weft-page-content .bn-block-content,
 .weft-page-content .bn-inline-content {
-  font-family: Newsreader, Georgia, serif;
+  font-family: var(--wf-body-font);
   font-size: 17px;
   line-height: 28px;
   color: var(--ink);
@@ -95,6 +95,15 @@
 .weft-page-content [data-is-empty-and-focused] .bn-inline-content::before,
 .weft-page-content .bn-block-content[data-is-empty]::before {
   color: var(--ink-faint);
+}
+
+/* Page title follows the page font for the non-default faces (the serif default
+ * keeps its Space Grotesk display look untouched). */
+[data-page-font='sans'] .weft-title {
+  font-family: Inter, system-ui, sans-serif;
+}
+[data-page-font='mono'] .weft-title {
+  font-family: var(--wf-mono-font);
 }
 
 /* Collaboration carets. */

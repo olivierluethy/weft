@@ -17,6 +17,8 @@ import {
   MessageSquare,
   Move,
   Trash2,
+  Type,
+  Check,
 } from 'lucide-react';
 import { PAGE_WIDTH } from '@weft/shared';
 import type { PageDetail, Breadcrumb } from '@/lib/queries';
@@ -80,12 +82,13 @@ export function PageHeader({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page.id]);
 
+  const font = page.fontFamily ?? 'serif';
   const exportItems = [
     { label: 'Markdown (.md)', onClick: () => exportMarkdown(page.title, blocks) },
-    { label: 'HTML (.html)', onClick: () => exportHtmlFile(page.title, blocks) },
+    { label: 'HTML (.html)', onClick: () => exportHtmlFile(page.title, blocks, font) },
     { label: 'JSON (.json)', onClick: () => exportJson(page.title, page) },
-    { label: 'Word (.docx)', onClick: () => void exportDocx(page.title, blocks) },
-    { label: 'PDF (print)', onClick: () => exportPdf(page.title, blocks) },
+    { label: 'Word (.docx)', onClick: () => void exportDocx(page.title, blocks, font) },
+    { label: 'PDF (print)', onClick: () => exportPdf(page.title, blocks, font) },
   ];
 
   const setWidth = (delta: number) =>
@@ -108,6 +111,21 @@ export function PageHeader({
             trigger={<IconButton label="Page stats"><BarChart3 size={16} /></IconButton>}
           >
             <StatsPanel stats={stats} updatedAt={page.updatedAt} />
+          </Popover>
+          <Popover
+            align="end"
+            trigger={<IconButton label="Font family"><Type size={16} /></IconButton>}
+          >
+            {(close) => (
+              <FontPicker
+                value={page.fontFamily ?? 'serif'}
+                editable={editable}
+                onPick={(f) => {
+                  onUpdate({ fontFamily: f });
+                  close();
+                }}
+              />
+            )}
           </Popover>
           <IconButton
             label={page.isFavorite ? 'Unfavorite' : 'Favorite'}
@@ -227,7 +245,7 @@ export function PageHeader({
             rows={1}
             placeholder="Untitled"
             spellCheck={false}
-            className="w-full resize-none overflow-hidden border-none bg-transparent font-display text-[40px] font-semibold leading-tight tracking-tight text-ink outline-none placeholder:text-ink-faint disabled:cursor-default"
+            className="weft-title w-full resize-none overflow-hidden border-none bg-transparent font-display text-[40px] font-semibold leading-tight tracking-tight text-ink outline-none placeholder:text-ink-faint disabled:cursor-default"
           />
 
           <TagEditor page={page} editable={editable} />
@@ -263,6 +281,56 @@ export function PageHeader({
     // handled inside CoverArea via its own popover; this menu item focuses it.
     document.getElementById('weft-cover-trigger')?.click();
   }
+}
+
+const FONT_OPTIONS: { key: 'serif' | 'sans' | 'mono'; label: string; sample: string; css: string }[] = [
+  { key: 'serif', label: 'Serif', sample: 'Ag', css: 'Newsreader, Georgia, serif' },
+  { key: 'sans', label: 'Sans', sample: 'Ag', css: 'Inter, system-ui, sans-serif' },
+  { key: 'mono', label: 'Mono', sample: 'Ag', css: "'JetBrains Mono', ui-monospace, monospace" },
+];
+
+/** Page-level font family picker (Notion-style). Persisted via onUpdate. */
+function FontPicker({
+  value,
+  editable,
+  onPick,
+}: {
+  value: string;
+  editable: boolean;
+  onPick: (font: 'serif' | 'sans' | 'mono') => void;
+}) {
+  return (
+    <div className="w-56 p-1">
+      <p className="px-2 pb-1 pt-1.5 text-2xs font-semibold uppercase tracking-wide text-ink-faint">
+        Page font
+      </p>
+      {FONT_OPTIONS.map((opt) => {
+        const active = value === opt.key;
+        return (
+          <button
+            key={opt.key}
+            disabled={!editable}
+            onClick={() => onPick(opt.key)}
+            className={cn(
+              'flex w-full items-center gap-3 rounded px-2 py-1.5 text-left text-sm transition disabled:cursor-not-allowed disabled:opacity-60',
+              active ? 'bg-thread-soft text-thread' : 'text-ink hover:bg-sunk',
+            )}
+          >
+            <span
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded border border-line-strong bg-surface text-lg text-ink"
+              style={{ fontFamily: opt.css }}
+            >
+              {opt.sample}
+            </span>
+            <span className="flex-1" style={{ fontFamily: opt.css }}>
+              {opt.label}
+            </span>
+            {active && <Check size={15} className="shrink-0 text-thread" />}
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 function CoverArea({

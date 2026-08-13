@@ -162,17 +162,20 @@ the default/serif and sans page fonts; in the mono page font they follow the bod
 ### 3.3 Page font family (per-page, Notion-style)
 
 Font family is a **page-level** setting (`Page.fontFamily`), chosen from a curated set and
-persisted per page. The default preserves Weft's existing look exactly. It applies to the
-page title and body content in the editor and is carried into exports.
+persisted per page. The default preserves Weft's existing look exactly. Switching the page
+font re-faces the whole page voice — title, headings and body — while the tokenised heading
+**sizes** (§3.2) stay fixed, so hierarchy never depends on the chosen family.
 
-| Key      | Body face                 | Heading face        | Label   |
-| -------- | ------------------------- | ------------------- | ------- |
-| `serif`  | Newsreader (default)      | Space Grotesk       | Serif   |
-| `sans`   | Inter                     | Space Grotesk       | Sans    |
-| `mono`   | JetBrains Mono            | JetBrains Mono      | Mono    |
+| Key      | Page face (title / headings / body) | Label   |
+| -------- | ----------------------------------- | ------- |
+| `serif`  | Newsreader (default)                | Serif   |
+| `sans`   | Inter                               | Sans    |
+| `mono`   | JetBrains Mono                      | Mono    |
 
-The active face is driven by a `data-page-font="serif|sans|mono"` attribute on the page
-container; `serif` is the no-op default and leaves the current design untouched.
+The active face is driven by a `--wf-body-font` token, switched by a
+`data-page-font="serif|sans|mono"` attribute on the page container; `serif` is the no-op
+default and leaves the current design untouched. The picker lives in the page action bar
+(a `Type` icon). Exports (HTML/PDF/DOCX) carry the same face.
 
 Display type uses tight tracking (`-0.02em` on titles/H1). Body uses default tracking.
 

@@ -78,6 +78,7 @@ export function PageView() {
   return (
     <div
       className="relative h-full overflow-y-auto"
+      data-page-font={page.fontFamily ?? 'serif'}
       style={
         page.backgroundUrl
           ? {

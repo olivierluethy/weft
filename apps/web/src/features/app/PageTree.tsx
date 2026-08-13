@@ -7,6 +7,8 @@ import { api } from '@/lib/api';
 import { useInvalidate } from '@/lib/queries';
 import { useWorkspace } from './workspace';
 import { PageRowMenu } from './PageRowMenu';
+import { Popover } from '@/components/ui/Popover';
+import { IconPicker, PageIcon } from '@/features/editor/pickers/IconPicker';
 
 interface TreeItem extends PageTreeNode {
   children: TreeItem[];
@@ -162,9 +164,40 @@ export function PageTree({ nodes, filter }: { nodes: PageTreeNode[]; filter?: (n
             />
           </button>
 
-          <span className="flex h-4 w-4 shrink-0 items-center justify-center text-[13px]">
-            {item.icon || <FileText size={14} className="text-ink-faint" />}
-          </span>
+          <Popover
+            trigger={
+              <button
+                draggable={false}
+                onClick={(e) => e.stopPropagation()}
+                title="Change icon"
+                className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-[13px] hover:bg-line/60"
+              >
+                {item.icon ? (
+                  <PageIcon icon={item.icon} size={15} />
+                ) : (
+                  <FileText size={14} className="text-ink-faint" />
+                )}
+              </button>
+            }
+          >
+            {(close) => (
+              <IconPicker
+                workspaceId={workspaceId ?? ''}
+                onPick={async (v) => {
+                  await api.patch(`/pages/${item.id}`, { icon: v });
+                  await invalidate.tree(workspaceId);
+                  invalidate.page(item.id);
+                  close();
+                }}
+                onRemove={async () => {
+                  await api.patch(`/pages/${item.id}`, { icon: null });
+                  await invalidate.tree(workspaceId);
+                  invalidate.page(item.id);
+                  close();
+                }}
+              />
+            )}
+          </Popover>
 
           <span className="flex-1 truncate">{item.title || 'Untitled'}</span>
 

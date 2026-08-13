@@ -1,0 +1,294 @@
+// Weft data model.
+//
+// Default datasource is SQLite (single file, zero-config). To swap to Postgres:
+//   1. set `provider = "postgresql"` below,
+//   2. point DATABASE_URL at your server,
+//   3. run `pnpm --filter @weft/server prisma:migrate`.
+// The schema deliberately avoids native enums and DB-specific types so it is a
+// drop-in on either engine — role/kind fields are validated in app code against
+// the shared `ROLES`/enum contracts in @weft/shared.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ── Accounts & security ────────────────────────────────────────────────
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  bio          String?
+  avatarUrl    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships  Membership[]
+  ownedWorkspaces Workspace[] @relation("WorkspaceOwner")
+  sessions     Session[]
+  loginEvents  LoginEvent[]
+  resetTokens  PasswordResetToken[]
+  favorites    Favorite[]
+  comments     Comment[]
+  versions     Version[]
+  uploads      Upload[]
+  createdPages Page[]   @relation("PageCreatedBy")
+  editedPages  Page[]   @relation("PageEditedBy")
+  sentInvites  Invite[] @relation("InviteSentBy")
+  createdShareLinks ShareLink[]
+}
+
+model Session {
+  id               String    @id @default(cuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokenHash String    // sha256 of the current refresh token (rotated)
+  remember         Boolean   @default(false)
+  userAgent        String?
+  device           String?
+  browser          String?
+  os               String?
+  ip               String?
+  location         String?
+  createdAt        DateTime  @default(now())
+  lastSeenAt       DateTime  @default(now())
+  expiresAt        DateTime
+  revokedAt        DateTime?
+
+  @@index([userId])
+}
+
+model LoginEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String   // login | logout | failed | register | reset | revoke
+  success   Boolean  @default(true)
+  device    String?
+  browser   String?
+  os        String?
+  ip        String?
+  location  String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+// ── Workspaces, members, invites ───────────────────────────────────────
+model Workspace {
+  id        String   @id @default(cuid())
+  name      String
+  icon      String?
+  globalCss String?
+  ownerId   String
+  owner     User     @relation("WorkspaceOwner", fields: [ownerId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships Membership[]
+  pages       Page[]
+  invites     Invite[]
+  tags        Tag[]
+  uploads     Upload[]
+}
+
+model Membership {
+  id          String   @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role        String    @default("editor") // owner | editor | viewer
+  createdAt   DateTime  @default(now())
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+}
+
+model Invite {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  email       String
+  role        String    @default("editor")
+  tokenHash   String    @unique
+  invitedById String
+  invitedBy   User      @relation("InviteSentBy", fields: [invitedById], references: [id])
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([workspaceId])
+  @@index([email])
+}
+
+// ── Pages & content ────────────────────────────────────────────────────
+model Page {
+  id           String   @id @default(cuid())
+  workspaceId  String
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  parentId     String?
+  parent       Page?    @relation("PageChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  children     Page[]   @relation("PageChildren")
+
+  title        String   @default("")
+  icon         String?
+  coverUrl     String?
+  coverOffsetY Int      @default(50)
+  backgroundUrl String?
+  content      Json?    // BlockNote document JSON — canonical source of truth
+  customCss    String?
+
+  position     Float    @default(0)
+  isLocked     Boolean  @default(false)
+  isFullWidth  Boolean  @default(false)
+  width        Int      @default(720)
+  isTemplate   Boolean  @default(false)
+  deletedAt    DateTime? // trash (soft delete)
+
+  createdById  String?
+  createdBy    User?    @relation("PageCreatedBy", fields: [createdById], references: [id])
+  lastEditedById String?
+  lastEditedBy User?    @relation("PageEditedBy", fields: [lastEditedById], references: [id])
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  versions     Version[]
+  comments     Comment[]
+  favorites    Favorite[]
+  tags         PageTag[]
+  shareLinks   ShareLink[]
+  backlinksOut Backlink[] @relation("BacklinkSource")
+  backlinksIn  Backlink[] @relation("BacklinkTarget")
+
+  @@index([workspaceId])
+  @@index([parentId])
+  @@index([workspaceId, deletedAt])
+}
+
+model Version {
+  id        String   @id @default(cuid())
+  pageId    String
+  page      Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  content   Json
+  kind      String   @default("auto") // manual | auto | blur | restore
+  label     String?
+  wordCount Int      @default(0)
+  authorId  String?
+  author    User?    @relation(fields: [authorId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@index([pageId, createdAt])
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pageId    String
+  page      Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, pageId])
+}
+
+model Backlink {
+  id           String @id @default(cuid())
+  sourcePageId String
+  source       Page   @relation("BacklinkSource", fields: [sourcePageId], references: [id], onDelete: Cascade)
+  targetPageId String
+  target       Page   @relation("BacklinkTarget", fields: [targetPageId], references: [id], onDelete: Cascade)
+
+  @@unique([sourcePageId, targetPageId])
+  @@index([targetPageId])
+}
+
+model ShareLink {
+  id              String    @id @default(cuid())
+  pageId          String
+  page            Page      @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  token           String    @unique
+  permission      String    @default("view") // view | edit
+  includeChildren Boolean   @default(true)
+  createdById     String
+  createdBy       User      @relation(fields: [createdById], references: [id])
+  createdAt       DateTime  @default(now())
+  revokedAt       DateTime?
+
+  @@index([pageId])
+}
+
+model Comment {
+  id         String    @id @default(cuid())
+  pageId     String
+  page       Page      @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  body       String
+  blockId    String?
+  parentId   String?
+  parent     Comment?  @relation("CommentThread", fields: [parentId], references: [id], onDelete: Cascade)
+  replies    Comment[] @relation("CommentThread")
+  resolvedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([pageId])
+}
+
+model Tag {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  color       String    @default("thread")
+  createdAt   DateTime  @default(now())
+
+  pages PageTag[]
+
+  @@unique([workspaceId, name])
+}
+
+model PageTag {
+  pageId String
+  page   Page   @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  tagId  String
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([pageId, tagId])
+  @@index([tagId])
+}
+
+model Upload {
+  id           String    @id @default(cuid())
+  workspaceId  String?
+  workspace    Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  filename     String
+  originalName String
+  mime         String
+  size         Int
+  url          String
+  createdAt    DateTime  @default(now())
+
+  @@index([workspaceId])
+}

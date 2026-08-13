@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Weft">
+  <rect width="64" height="64" rx="16" fill="#2E4374" />
+  <g stroke-width="8" stroke-linecap="round" fill="none">
+    <!-- horizontal threads (woven under) -->
+    <line x1="9" y1="24" x2="55" y2="24" stroke="#FCFBF9" />
+    <line x1="9" y1="40" x2="55" y2="40" stroke="#FCFBF9" />
+    <!-- vertical threads (woven over); right thread is the madder accent -->
+    <line x1="24" y1="9" x2="24" y2="55" stroke="#FCFBF9" />
+    <line x1="40" y1="9" x2="40" y2="55" stroke="#B4552D" />
+    <!-- selected crossings where a horizontal thread passes back over -->
+    <line x1="16" y1="40" x2="32" y2="40" stroke="#FCFBF9" />
+    <line x1="32" y1="24" x2="48" y2="24" stroke="#FCFBF9" />
+  </g>
+</svg>

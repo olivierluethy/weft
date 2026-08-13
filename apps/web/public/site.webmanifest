@@ -1,0 +1,16 @@
+{
+  "name": "Weft",
+  "short_name": "Weft",
+  "description": "A local-first, self-hostable workspace. A woven web of connected notes.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FCFBF9",
+  "theme_color": "#2E4374",
+  "icons": [
+    { "src": "/favicon-16.png", "sizes": "16x16", "type": "image/png" },
+    { "src": "/favicon-32.png", "sizes": "32x32", "type": "image/png" },
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}

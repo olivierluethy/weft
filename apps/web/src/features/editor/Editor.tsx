@@ -8,15 +8,16 @@ import {
   getDefaultReactSlashMenuItems,
   type DefaultReactSuggestionItem,
 } from '@blocknote/react';
-import { filterSuggestionItems } from '@blocknote/core';
+import { filterSuggestionItems, insertOrUpdateBlock } from '@blocknote/core';
 import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/mantine/style.css';
+import { FileText } from 'lucide-react';
 import './editor.css';
 import { api } from '@/lib/api';
 import { hashHue } from '@/lib/utils';
 import { computeStats, type DocStats } from './stats';
 import { useThemeStore } from '@/hooks/useTheme';
-import { useTree } from '@/lib/queries';
+import { useTree, useInvalidate } from '@/lib/queries';
 import { weftSchema } from './mention';
 import { SlashMenu } from './SlashMenu';
 import { WeftFormattingToolbar } from './FormattingToolbar';
@@ -66,6 +67,7 @@ export function Editor({
   }, [pageId]);
 
   const { data: tree } = useTree(workspaceId);
+  const invalidate = useInvalidate();
 
   const editor = useCreateBlockNote({
     schema: weftSchema,
@@ -98,6 +100,40 @@ export function Editor({
             ' ',
           ]),
       }));
+
+  // Slash menu items = BlockNote defaults + a `/page` command that spawns a real
+  // child page (nested in the sidebar tree) and drops a link block to it here.
+  const getSlashItems = async (query: string): Promise<DefaultReactSuggestionItem[]> => {
+    const defaults = getDefaultReactSlashMenuItems(editor);
+    const pageItem: DefaultReactSuggestionItem = {
+      title: 'Page',
+      subtext: 'Create a sub-page nested in this one',
+      group: 'Basic blocks',
+      icon: <FileText size={18} />,
+      onItemClick: async () => {
+        try {
+          const res = await api.post<{ page: { id: string } }>('/pages', {
+            workspaceId,
+            parentId: pageId,
+          });
+          insertOrUpdateBlock(editor, {
+            type: 'pageLink',
+            props: { pageId: res.page.id, workspaceId, title: '', icon: '' },
+          });
+          await invalidate.tree(workspaceId);
+        } catch {
+          /* page creation failed — leave the editor untouched */
+        }
+      },
+    };
+    // Keep the "Basic blocks" group contiguous by slotting Page after its last member.
+    const lastBasic = defaults.map((d) => d.group).lastIndexOf('Basic blocks');
+    const merged =
+      lastBasic === -1
+        ? [...defaults, pageItem]
+        : [...defaults.slice(0, lastBasic + 1), pageItem, ...defaults.slice(lastBasic + 1)];
+    return filterSuggestionItems(merged, query);
+  };
 
   const saveTimer = useRef<ReturnType<typeof setTimeout>>();
   const snapTimer = useRef<ReturnType<typeof setTimeout>>();
@@ -183,9 +219,7 @@ export function Editor({
        * internally scrollable so every block category stays reachable. */}
       <SuggestionMenuController
         triggerCharacter="/"
-        getItems={async (q) =>
-          filterSuggestionItems(getDefaultReactSlashMenuItems(editor), q)
-        }
+        getItems={getSlashItems}
         suggestionMenuComponent={SlashMenu}
       />
       <SuggestionMenuController triggerCharacter="@" getItems={async (q) => getMentionItems(q)} />

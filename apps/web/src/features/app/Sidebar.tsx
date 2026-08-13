@@ -16,6 +16,7 @@ import {
   Users,
   PanelLeftClose,
   X,
+  LayoutTemplate,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useThemeStore } from '@/hooks/useTheme';
@@ -25,6 +26,9 @@ import { api } from '@/lib/api';
 import { Logo } from '@/components/Logo';
 import { Avatar } from '@/components/ui/Avatar';
 import { Menu } from '@/components/ui/Menu';
+import { Popover } from '@/components/ui/Popover';
+import { TemplatePicker } from './TemplatePicker';
+import { useCreatePage } from './useCreatePage';
 import { PageTree } from './PageTree';
 import { toast } from '@/lib/toast';
 import { useState } from 'react';
@@ -49,13 +53,9 @@ export function Sidebar({
   const navigate = useNavigate();
   const [dragging, setDragging] = useState(false);
 
+  const createPage = useCreatePage();
   const activeWs = workspaces.find((w) => w.id === workspaceId);
   const favorites = (tree ?? []).filter((n) => n.isFavorite);
-
-  const newPage = async () => {
-    const res = await api.post<{ page: { id: string } }>('/pages', { workspaceId });
-    navigate(`/p/${res.page.id}`);
-  };
 
   const startResize = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -145,12 +145,35 @@ export function Sidebar({
 
       {/* Scroll area */}
       <div className="mt-2 flex-1 overflow-y-auto px-2 pb-2">
-        <button
-          onClick={newPage}
-          className="mb-1 flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm text-ink-muted transition hover:bg-surface hover:text-ink"
-        >
-          <Plus size={15} /> New page
-        </button>
+        <div className="mb-1 flex items-center gap-0.5">
+          <button
+            onClick={() => void createPage()}
+            className="flex flex-1 items-center gap-2 rounded px-2 py-1.5 text-sm text-ink-muted transition hover:bg-surface hover:text-ink"
+          >
+            <Plus size={15} /> New page
+          </button>
+          <Popover
+            align="end"
+            trigger={
+              <button
+                title="New from template"
+                className="flex h-7 w-7 items-center justify-center rounded text-ink-faint transition hover:bg-surface hover:text-ink"
+              >
+                <LayoutTemplate size={15} />
+              </button>
+            }
+          >
+            {(close) => (
+              <TemplatePicker
+                workspaceId={workspaceId ?? ''}
+                onPick={(id) => {
+                  void createPage({ templateId: id });
+                  close();
+                }}
+              />
+            )}
+          </Popover>
+        </div>
 
         {favorites.length > 0 && (
           <div className="mb-2">

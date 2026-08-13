@@ -1,28 +1,26 @@
 import { useNavigate } from 'react-router-dom';
-import { FileText, Plus, Clock, Star } from 'lucide-react';
+import { FileText, Plus, Clock, Star, LayoutTemplate } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
 import { useWorkspace } from './workspace';
 import { useTree } from '@/lib/queries';
-import { api } from '@/lib/api';
 import { Logo } from '@/components/Logo';
+import { Popover } from '@/components/ui/Popover';
+import { TemplatePicker } from './TemplatePicker';
+import { useCreatePage } from './useCreatePage';
 
 export function HomeView() {
   const { user, workspaces } = useAuth();
   const { workspaceId } = useWorkspace();
   const { data: tree } = useTree(workspaceId);
   const navigate = useNavigate();
+  const createPage = useCreatePage();
   const ws = workspaces.find((w) => w.id === workspaceId);
 
   const recents = [...(tree ?? [])]
     .sort((a, b) => +new Date(b.updatedAt) - +new Date(a.updatedAt))
     .slice(0, 8);
   const favorites = (tree ?? []).filter((n) => n.isFavorite).slice(0, 6);
-
-  const newPage = async () => {
-    const res = await api.post<{ page: { id: string } }>('/pages', { workspaceId });
-    navigate(`/p/${res.page.id}`);
-  };
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
@@ -40,12 +38,32 @@ export function HomeView() {
           </div>
         </div>
 
-        <button
-          onClick={newPage}
-          className="mb-10 flex w-full items-center gap-3 rounded-lg border border-dashed border-line-strong bg-surface px-4 py-3 text-left text-sm text-ink-muted transition hover:border-thread hover:text-thread"
-        >
-          <Plus size={18} /> Create a new page
-        </button>
+        <div className="mb-10 flex gap-2">
+          <button
+            onClick={() => void createPage()}
+            className="flex flex-1 items-center gap-3 rounded-lg border border-dashed border-line-strong bg-surface px-4 py-3 text-left text-sm text-ink-muted transition hover:border-thread hover:text-thread"
+          >
+            <Plus size={18} /> Create a new page
+          </button>
+          <Popover
+            align="end"
+            trigger={
+              <button className="btn btn-secondary h-auto px-3">
+                <LayoutTemplate size={16} /> Templates
+              </button>
+            }
+          >
+            {(close) => (
+              <TemplatePicker
+                workspaceId={workspaceId ?? ''}
+                onPick={(id) => {
+                  void createPage({ templateId: id });
+                  close();
+                }}
+              />
+            )}
+          </Popover>
+        </div>
 
         {favorites.length > 0 && (
           <Section icon={<Star size={15} className="fill-madder text-madder" />} title="Favorites">

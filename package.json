@@ -9,10 +9,11 @@
     "node": ">=20"
   },
   "scripts": {
-    "dev": "concurrently -n server,web -c blue,magenta \"pnpm --filter @weft/server dev\" \"pnpm --filter @weft/web dev\"",
+    "dev": "node scripts/setup.mjs && concurrently -n server,web -c blue,magenta \"pnpm --filter @weft/server dev\" \"pnpm --filter @weft/web dev\"",
     "build": "pnpm --filter @weft/shared build && pnpm --filter @weft/server build && pnpm --filter @weft/web build",
     "start": "pnpm --filter @weft/server start",
-    "setup": "pnpm --filter @weft/server prisma:generate && pnpm --filter @weft/server prisma:push",
+    "setup": "node scripts/setup.mjs",
+    "seed": "pnpm --filter @weft/server seed",
     "postinstall": "pnpm --filter @weft/server prisma:generate",
     "lint": "eslint . --ext .ts,.tsx",
     "format": "prettier --write \"**/*.{ts,tsx,css,md,json}\"",

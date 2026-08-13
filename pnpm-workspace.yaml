@@ -1,3 +1,13 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+# Native packages whose install/build scripts are required (compiled bindings
+# and platform binaries). Approved explicitly for pnpm 11's secure defaults.
+onlyBuiltDependencies:
+  - "@prisma/client"
+  - "@prisma/engines"
+  - argon2
+  - esbuild
+  - prisma
+  - sharp

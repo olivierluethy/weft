@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useRef } from 'react';
 import * as Y from 'yjs';
 import { HocuspocusProvider } from '@hocuspocus/provider';
-import { useCreateBlockNote } from '@blocknote/react';
+import {
+  useCreateBlockNote,
+  SuggestionMenuController,
+  type DefaultReactSuggestionItem,
+} from '@blocknote/react';
 import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/mantine/style.css';
 import './editor.css';
@@ -9,6 +13,8 @@ import { api } from '@/lib/api';
 import { hashHue } from '@/lib/utils';
 import { computeStats, type DocStats } from './stats';
 import { useThemeStore } from '@/hooks/useTheme';
+import { useTree } from '@/lib/queries';
+import { weftSchema } from './mention';
 import { SNAPSHOT_DEBOUNCE_MS } from '@weft/shared';
 
 const colorFor = (id: string) => `hsl(${hashHue(id)} 55% 45%)`;
@@ -51,7 +57,10 @@ export function Editor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageId]);
 
+  const { data: tree } = useTree(workspaceId);
+
   const editor = useCreateBlockNote({
+    schema: weftSchema,
     collaboration: {
       provider,
       fragment: doc.getXmlFragment('document'),
@@ -64,6 +73,23 @@ export function Editor({
       return location.origin + upload.url;
     },
   });
+
+  // `@` menu: insert a page-mention inline chip that the server turns into a backlink.
+  const getMentionItems = (query: string): DefaultReactSuggestionItem[] =>
+    (tree ?? [])
+      .filter(
+        (p) => p.id !== pageId && (p.title || 'Untitled').toLowerCase().includes(query.toLowerCase()),
+      )
+      .slice(0, 10)
+      .map((p) => ({
+        title: p.title || 'Untitled',
+        icon: <span className="text-sm">{p.icon || '📄'}</span>,
+        onItemClick: () =>
+          editor.insertInlineContent([
+            { type: 'mention', props: { pageId: p.id, title: p.title || 'Untitled', icon: p.icon ?? '' } },
+            ' ',
+          ]),
+      }));
 
   const saveTimer = useRef<ReturnType<typeof setTimeout>>();
   const snapTimer = useRef<ReturnType<typeof setTimeout>>();
@@ -138,6 +164,8 @@ export function Editor({
       onChange={handleChange}
       theme={effectiveTheme(theme)}
       className="weft-page-content"
-    />
+    >
+      <SuggestionMenuController triggerCharacter="@" getItems={async (q) => getMentionItems(q)} />
+    </BlockNoteView>
   );
 }

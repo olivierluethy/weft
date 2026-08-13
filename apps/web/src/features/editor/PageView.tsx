@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { flashBlock } from '@/features/search/jump';
 import { Link2 } from 'lucide-react';
 import { PAGE_WIDTH } from '@weft/shared';
 import { usePage, useInvalidate } from '@/lib/queries';
@@ -16,6 +17,7 @@ import { computeStats, type DocStats } from './stats';
 
 export function PageView() {
   const { pageId } = useParams();
+  const [searchParams] = useSearchParams();
   const { data, isLoading, refetch } = usePage(pageId);
   const { user } = useAuth();
   const { workspaceId } = useWorkspace();
@@ -31,6 +33,15 @@ export function PageView() {
     if (page) setStats(computeStats(page.content));
     contentRef.current = page?.content ?? null;
   }, [page]);
+
+  // Jump to (and flash) a searched block once the editor has rendered.
+  useEffect(() => {
+    if (!page) return;
+    const block = searchParams.get('b');
+    if (!block) return;
+    const timer = setTimeout(() => flashBlock(block), 300);
+    return () => clearTimeout(timer);
+  }, [page, searchParams]);
 
   const saveContent = useCallback(
     (doc: unknown) => {

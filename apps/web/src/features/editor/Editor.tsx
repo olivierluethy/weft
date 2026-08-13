@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, type MutableRefObject } from 'react';
 import * as Y from 'yjs';
 import { HocuspocusProvider } from '@hocuspocus/provider';
 import {
@@ -51,6 +51,12 @@ function effectiveTheme(pref: string): 'light' | 'dark' {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
+/** Reorder a whole heading section from the outline: move the heading `draggedId`
+ * plus every following top-level block up to (but not including) the next heading
+ * of equal-or-higher level, placing it right before `beforeId` (or at the end
+ * when `beforeId` is null). Exposed to the Outline via `reorderRef`. */
+export type ReorderSection = (draggedId: string, beforeId: string | null) => void;
+
 export function Editor({
   pageId,
   workspaceId,
@@ -60,6 +66,7 @@ export function Editor({
   onSave,
   onStats,
   onHeadings,
+  reorderRef,
 }: {
   pageId: string;
   workspaceId: string;
@@ -69,6 +76,7 @@ export function Editor({
   onSave: (doc: unknown) => void;
   onStats?: (stats: DocStats) => void;
   onHeadings?: (headings: OutlineHeading[]) => void;
+  reorderRef?: MutableRefObject<ReorderSection | null>;
 }) {
   const { theme } = useThemeStore();
 
@@ -244,6 +252,50 @@ export function Editor({
       void api.post('/versions', { pageId, content: docJson, kind: 'auto' }).catch(() => undefined);
     }, SNAPSHOT_DEBOUNCE_MS);
   };
+
+  // Section reorder driven by the outline's drag-and-drop. Works on the top-level
+  // block list; a "section" is a heading plus the following blocks up to the next
+  // heading of equal-or-higher level (so sub-headings and body move with it). We
+  // apply the change as ONE `replaceBlocks` over just the affected contiguous
+  // window, so it flows through the normal editor history (undoable) and the
+  // collab doc (persists) without touching either mechanism.
+  useEffect(() => {
+    if (!reorderRef) return;
+    reorderRef.current = (draggedId, beforeId) => {
+      type TopBlock = { id: string; type: string; props?: { level?: number } };
+      const top = editor.document as unknown as TopBlock[];
+      const dStart = top.findIndex((b) => b.id === draggedId);
+      if (dStart < 0) return; // heading isn't a top-level block (e.g. indented) — skip
+      const dLevel = top[dStart]!.props?.level ?? 1;
+      let dEnd = dStart + 1;
+      while (dEnd < top.length && !(top[dEnd]!.type === 'heading' && (top[dEnd]!.props?.level ?? 1) <= dLevel)) {
+        dEnd++;
+      }
+      const sectionIds = new Set(top.slice(dStart, dEnd).map((b) => b.id));
+      if (beforeId && sectionIds.has(beforeId)) return; // dropping inside its own section
+
+      const full = editor.document; // full block objects (with children/content)
+      const section = full.slice(dStart, dEnd);
+      const rest = full.filter((b) => !sectionIds.has(b.id));
+      let insertAt = beforeId ? rest.findIndex((b) => b.id === beforeId) : rest.length;
+      if (insertAt < 0) insertAt = rest.length;
+      const next = [...rest.slice(0, insertAt), ...section, ...rest.slice(insertAt)];
+
+      // Replace only the contiguous window that actually moved.
+      let lo = 0;
+      while (lo < full.length && full[lo]!.id === next[lo]!.id) lo++;
+      if (lo === full.length) return; // no-op
+      let hi = full.length - 1;
+      while (hi >= 0 && full[hi]!.id === next[hi]!.id) hi--;
+      editor.replaceBlocks(
+        full.slice(lo, hi + 1).map((b) => b.id),
+        next.slice(lo, hi + 1) as never,
+      );
+    };
+    return () => {
+      reorderRef.current = null;
+    };
+  });
 
   return (
     <BlockNoteView

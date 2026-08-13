@@ -11,7 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useWorkspace } from '@/features/app/workspace';
 import { GlobalStyles } from '@/features/app/GlobalStyles';
 import { Spinner } from '@/components/ui/Spinner';
-import { Editor } from './Editor';
+import { Editor, type ReorderSection } from './Editor';
 import { PageHeader } from './PageHeader';
 import { Outline } from './Outline';
 import type { OutlineHeading } from './outline';
@@ -28,6 +28,7 @@ export function PageView() {
   const [headings, setHeadings] = useState<OutlineHeading[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const contentRef = useRef<unknown>(null);
+  const reorderRef = useRef<ReorderSection | null>(null);
 
   const page = data?.page;
   const role = data?.role ?? 'viewer';
@@ -88,6 +89,7 @@ export function PageView() {
   return (
     <div
       className="relative h-full overflow-y-auto"
+      data-page-scroll
       data-page-font={page.fontFamily ?? 'serif'}
       style={
         page.backgroundUrl
@@ -128,12 +130,17 @@ export function PageView() {
           onSave={saveContent}
           onStats={setStats}
           onHeadings={setHeadings}
+          reorderRef={reorderRef}
         />
 
         <Backlinks pageId={pageId!} />
       </div>
 
-      <Outline headings={headings} />
+      <Outline
+        headings={headings}
+        canReorder={editable && !historyOpen}
+        onReorder={(draggedId, beforeId) => reorderRef.current?.(draggedId, beforeId)}
+      />
     </div>
   );
 }

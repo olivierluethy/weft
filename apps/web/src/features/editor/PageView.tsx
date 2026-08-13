@@ -93,7 +93,7 @@ export function PageView() {
         onRestored={() => void refetch()}
       />
 
-      <div className="mx-auto px-12 pb-40" style={{ maxWidth, width: '100%' }}>
+      <div className="mx-auto px-4 pb-40 sm:px-8 md:px-12" style={{ maxWidth, width: '100%' }}>
         <Editor
           key={pageId}
           pageId={pageId!}

@@ -88,7 +88,7 @@ export function PageHeader({
   return (
     <div>
       {/* Sticky action bar */}
-      <div className="sticky top-0 z-20 flex items-center gap-1 border-b border-line/60 bg-paper/80 px-4 py-2 backdrop-blur">
+      <div className="sticky top-0 z-20 flex items-center gap-1 border-b border-line/60 bg-paper/80 py-2 pl-12 pr-3 backdrop-blur md:px-4">
         <nav className="flex min-w-0 flex-1 items-center gap-1 text-sm text-ink-muted">
           {breadcrumbs.slice(0, -1).map((c) => (
             <span key={c.id} className="flex items-center gap-1">
@@ -183,10 +183,7 @@ export function PageHeader({
 
       {/* Icon + title */}
       <div
-        className={cn(
-          'mx-auto px-12',
-          page.isFullWidth ? 'max-w-none' : '',
-        )}
+        className={cn('mx-auto px-4 sm:px-8 md:px-12', page.isFullWidth ? 'max-w-none' : '')}
         style={{ maxWidth: page.isFullWidth ? '100%' : (page.width || 720) + 96 }}
       >
         <div className={cn('relative', page.coverUrl ? '-mt-8' : 'pt-12')}>

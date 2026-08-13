@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
 import {
   Star,
   Share2,
@@ -14,7 +13,6 @@ import {
   Maximize2,
   Minimize2,
   Download,
-  ChevronRight,
   Wallpaper,
   MessageSquare,
   Move,
@@ -33,6 +31,7 @@ import { StatsPanel } from './StatsPanel';
 import { CustomCssModal } from './CustomCssModal';
 import { CoverReposition } from './CoverReposition';
 import { coverImageStyle } from './cover';
+import { PathBar } from './PathBar';
 import { HistoryPanel } from '@/features/history/HistoryPanel';
 import { ShareDialog } from '@/features/share/ShareDialog';
 import { CommentsPanel } from '@/features/comments/CommentsPanel';
@@ -65,7 +64,6 @@ export function PageHeader({
   onUpdate: (partial: Record<string, unknown>) => void;
   onRestored: () => void;
 }) {
-  const navigate = useNavigate();
   const [title, setTitle] = useState(page.title);
   const [showHistory, setShowHistory] = useState(false);
   const [showShare, setShowShare] = useState(false);
@@ -89,21 +87,7 @@ export function PageHeader({
     <div>
       {/* Sticky action bar */}
       <div className="sticky top-0 z-20 flex items-center gap-1 border-b border-line/60 bg-paper/80 py-2 pl-12 pr-3 backdrop-blur md:px-4">
-        <nav className="flex min-w-0 flex-1 items-center gap-1 text-sm text-ink-muted">
-          {breadcrumbs.slice(0, -1).map((c) => (
-            <span key={c.id} className="flex items-center gap-1">
-              <Link to={`/p/${c.id}`} className="flex items-center gap-1 truncate rounded px-1.5 py-0.5 hover:bg-sunk">
-                <span className="text-[13px]">{c.icon && <PageIcon icon={c.icon} size={15} />}</span>
-                <span className="max-w-[160px] truncate">{c.title || 'Untitled'}</span>
-              </Link>
-              <ChevronRight size={13} className="text-ink-faint" />
-            </span>
-          ))}
-          <span className="flex items-center gap-1 truncate font-medium text-ink">
-            {page.icon && <PageIcon icon={page.icon} size={15} />}
-            <span className="max-w-[220px] truncate">{page.title || 'Untitled'}</span>
-          </span>
-        </nav>
+        <PathBar breadcrumbs={breadcrumbs} />
 
         <div className="flex shrink-0 items-center gap-0.5">
           {page.isLocked && (

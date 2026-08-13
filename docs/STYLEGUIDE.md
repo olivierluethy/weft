@@ -179,6 +179,23 @@ default and leaves the current design untouched. The picker lives in the page ac
 
 Display type uses tight tracking (`-0.02em` on titles/H1). Body uses default tracking.
 
+### 3.4 Inline font family (per selection)
+
+Font family is **also** available as an inline mark on a text selection, overriding the
+page default (§3.3) for the marked characters only — the page face stays the document
+default. It is a BlockNote style (`font`, a string value) exposed in the selection
+**formatting toolbar** as a `Type`-icon dropdown: **Default / Sans / Serif / Mono**.
+`Default` clears the mark and the text falls back to the page face. The three faces reuse
+the exact same stacks as §3.3, so an inline `Mono` run reads identically to a `mono` page:
+
+| Value   | Face stack                              |
+| ------- | --------------------------------------- |
+| `sans`  | Inter, system-ui, sans-serif            |
+| `serif` | Newsreader, Georgia, serif              |
+| `mono`  | 'JetBrains Mono', ui-monospace, monospace |
+
+The dropdown reflects the active run's face; the currently-applied value is checked.
+
 ---
 
 ## 4. Spacing, radius, shadow, borders
@@ -268,6 +285,15 @@ document order. Fixed to the right gutter, `hidden` below `xl`, width ~220px. Ro
 (same active language as the sidebar). Clicking a row smooth-scrolls to the heading and
 flashes it (`--flash-bg`). The list updates live as headings change and collapses to
 nothing when the page has no headings.
+
+**Sub-page block** — an inline child-page reference placed in the editor via the `/page`
+slash command (group _Basic blocks_). It creates a real child page (nested in the sidebar
+tree) and renders in the parent as a single clickable row: page icon (or a `FileText`
+glyph) + title, `text-[17px]` in the body face, `--ink` with a subtle underline that
+strengthens on hover; the whole row tints `--sunk` on hover, radius `rounded`. The title
+tracks the child page live (renaming the child updates the block). Clicking navigates to
+the child. It is a void block (`contentEditable=false`) — same interaction language as the
+inline `@`-mention chip, promoted to block level.
 
 **Cards / callouts** — `--surface`, `1px --line`, `rounded-md`. Callouts tint their
 background from the chosen colour at ~10% and border at ~24%.

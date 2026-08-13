@@ -73,14 +73,36 @@ export function PageHeader({
 }) {
   const [title, setTitle] = useState(page.title);
   const titleRef = useRef<HTMLTextAreaElement>(null);
+  const compactTitleRef = useRef<HTMLInputElement>(null);
   const cancelRef = useRef(false);
 
+  // True once the big title has scrolled up behind the sticky bar — then the
+  // sticky bar shows a compact, still-editable copy of the title.
+  const [scrolled, setScrolled] = useState(false);
+
   // Keep the field in sync when the title changes elsewhere (sidebar rename,
-  // a restored version) — but never while the user is mid-edit typing here.
+  // a restored version) — but never while the user is mid-edit typing in
+  // either the big title or its compact copy.
   useEffect(() => {
-    if (document.activeElement !== titleRef.current) setTitle(page.title);
+    const active = document.activeElement;
+    if (active !== titleRef.current && active !== compactTitleRef.current) setTitle(page.title);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page.title]);
+
+  // Watch the big title; once it slips above the sticky bar, reveal the compact
+  // one. rootMargin nudges the trigger line just below the bar's height.
+  useEffect(() => {
+    const el = titleRef.current;
+    const root = el?.closest('[data-page-scroll]') as HTMLElement | null;
+    if (!el || !root) return;
+    const io = new IntersectionObserver(([entry]) => setScrolled(!(entry?.isIntersecting ?? true)), {
+      root,
+      rootMargin: '-52px 0px 0px 0px',
+      threshold: 0,
+    });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [page.id]);
 
   const commitTitle = () => {
     if (cancelRef.current) {
@@ -91,7 +113,7 @@ export function PageHeader({
     if (title !== page.title) onUpdate({ title });
   };
 
-  const onTitleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const onTitleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       e.currentTarget.blur(); // commit via onBlur
@@ -129,7 +151,25 @@ export function PageHeader({
     <div>
       {/* Sticky action bar */}
       <div className="sticky top-0 z-20 flex items-center gap-1 border-b border-line/60 bg-paper/80 py-2 pl-12 pr-3 backdrop-blur md:px-4">
-        <PathBar breadcrumbs={breadcrumbs} />
+        {scrolled ? (
+          <div className="flex min-w-0 flex-1 items-center gap-1.5">
+            {page.icon && <PageIcon icon={page.icon} size={18} />}
+            <input
+              ref={compactTitleRef}
+              value={title}
+              onChange={(e) => setTitle(e.target.value.replace(/\n/g, ''))}
+              onKeyDown={onTitleKeyDown}
+              onBlur={commitTitle}
+              disabled={!editable}
+              placeholder="Untitled"
+              spellCheck={false}
+              title={editable ? 'Edit title' : undefined}
+              className="min-w-0 flex-1 truncate border-none bg-transparent font-display text-base font-semibold text-ink outline-none placeholder:text-ink-faint disabled:cursor-default"
+            />
+          </div>
+        ) : (
+          <PathBar breadcrumbs={breadcrumbs} />
+        )}
 
         <div className="flex shrink-0 items-center gap-0.5">
           {page.isLocked && (

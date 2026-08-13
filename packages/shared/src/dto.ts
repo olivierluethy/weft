@@ -53,7 +53,9 @@ export const updatePageSchema = z.object({
   title: z.string().max(300).optional(),
   icon: z.string().nullable().optional(),
   coverUrl: z.string().nullable().optional(),
-  coverOffsetY: z.number().optional(),
+  coverOffsetX: z.number().min(0).max(100).optional(),
+  coverOffsetY: z.number().min(0).max(100).optional(),
+  coverScale: z.number().min(1).max(4).optional(),
   backgroundUrl: z.string().nullable().optional(),
   content: z.any().optional(), // BlockNote document JSON
   isLocked: z.boolean().optional(),

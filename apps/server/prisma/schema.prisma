@@ -151,7 +151,9 @@ model Page {
   title        String   @default("")
   icon         String?
   coverUrl     String?
+  coverOffsetX Int      @default(50)
   coverOffsetY Int      @default(50)
+  coverScale   Float    @default(1)
   backgroundUrl String?
   content      Json?    // BlockNote document JSON — canonical source of truth
   customCss    String?

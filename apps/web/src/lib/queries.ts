@@ -9,7 +9,9 @@ export interface PageDetail {
   title: string;
   icon: string | null;
   coverUrl: string | null;
+  coverOffsetX: number;
   coverOffsetY: number;
+  coverScale: number;
   backgroundUrl: string | null;
   content: unknown;
   customCss: string | null;

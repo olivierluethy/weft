@@ -190,7 +190,10 @@ export function htmlDocument(title: string, blocks: Block[]): string {
   return `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title>
 <style>
   body{font-family:Georgia,'Newsreader',serif;max-width:720px;margin:40px auto;padding:0 20px;color:#211f1c;line-height:1.6}
-  h1,h2,h3{font-family:'Space Grotesk',system-ui,sans-serif;letter-spacing:-.01em}
+  h1,h2,h3{font-family:'Space Grotesk',system-ui,sans-serif;font-weight:600;line-height:1.25}
+  h1{font-size:30px;letter-spacing:-.02em;margin:1.2em 0 .4em}
+  h2{font-size:24px;letter-spacing:-.01em;margin:1.1em 0 .35em}
+  h3{font-size:19px;letter-spacing:-.01em;margin:1em 0 .3em}
   code{font-family:'JetBrains Mono',monospace;background:#f4f2ee;padding:2px 5px;border-radius:4px;font-size:.9em}
   pre{background:#f4f2ee;padding:14px;border-radius:8px;overflow:auto}
   blockquote{border-left:3px solid #2e4374;margin:0;padding-left:16px;color:#6b6660}

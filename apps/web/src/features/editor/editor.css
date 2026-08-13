@@ -52,24 +52,33 @@
 }
 
 /* Distinct, tokenised heading scale (docs/STYLEGUIDE.md §3.2).
- * BlockNote sizes headings from a relative `--level` (3em/2em/1.3em) via a rule
- * of specificity 0,5,0. We override `--level` with an absolute token — which
- * feeds BlockNote's own `font-size: var(--level)` — and set line-height / weight
- * at 0,6,0 so the hierarchy is unmistakable and matches exports. */
-.weft-page-content .bn-block-outer > .bn-block > .bn-block-content[data-content-type='heading'][data-level='1'] {
+ *
+ * BlockNote sizes headings from a relative `--level` (3em/2em/1.3em) fed into
+ * `font-size: var(--level)` at specificity 0,5,0. Overriding only `--level` is
+ * fragile: level 1 carries no `[data-level='1']`-specific default, and during a
+ * type change BlockNote briefly switches to a separate `--prev-level` rule. So
+ * we set `font-size` (and line-height/weight) *directly*, and keep `--level` in
+ * sync for any other consumer. The base rule matches BlockNote's own selector
+ * shape at 0,5,0 (H1 default; ties are won by source order since editor.css is
+ * imported after the Mantine stylesheet); the H2/H3 rules add an attribute for
+ * 0,6,0 so the ramp is unmistakable and matches the exports. */
+.weft-page-content .bn-block-outer > .bn-block > .bn-block-content[data-content-type='heading'] {
   --level: var(--h1-size);
+  font-size: var(--h1-size);
   line-height: var(--h1-lh);
   font-weight: var(--h-weight);
   letter-spacing: -0.02em;
 }
 .weft-page-content .bn-block-outer > .bn-block > .bn-block-content[data-content-type='heading'][data-level='2'] {
   --level: var(--h2-size);
+  font-size: var(--h2-size);
   line-height: var(--h2-lh);
   font-weight: var(--h-weight);
   letter-spacing: -0.01em;
 }
 .weft-page-content .bn-block-outer > .bn-block > .bn-block-content[data-content-type='heading'][data-level='3'] {
   --level: var(--h3-size);
+  font-size: var(--h3-size);
   line-height: var(--h3-lh);
   font-weight: var(--h-weight);
   letter-spacing: -0.01em;

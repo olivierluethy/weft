@@ -144,8 +144,10 @@ Fonts are self-hosted via `@fontsource` packages so the app works fully offline.
 
 The heading scale is tokenised so the editor, exports (HTML/PDF/DOCX) and print all
 render the same visual hierarchy. Headings **must** be visibly distinct, stepping down
-from title to body. BlockNote's default relative (`em`) heading sizes are overridden by
-these tokens.
+from title to body. BlockNote's default relative (`em`) heading sizes (`3em/2em/1.3em`)
+are replaced: `editor.css` sets an absolute `font-size`, `line-height` and `--h-weight`
+per level directly from these tokens (not via BlockNote's `--level` indirection), so the
+ramp is stable across type changes and every export.
 
 | Element   | Token pair                    | Size / line-height        | Weight | Tracking |
 | --------- | ----------------------------- | ------------------------- | ------ | -------- |

@@ -142,24 +142,43 @@ Fonts are self-hosted via `@fontsource` packages so the app works fully offline.
 
 ### 3.2 Editor content scale (Newsreader)
 
-The heading scale is tokenised so the editor, exports (HTML/PDF/DOCX) and print all
-render the same visual hierarchy. Headings **must** be visibly distinct, stepping down
-from title to body. BlockNote's default relative (`em`) heading sizes (`3em/2em/1.3em`)
-are replaced: `editor.css` sets an absolute `font-size`, `line-height` and `--h-weight`
-per level directly from these tokens (not via BlockNote's `--level` indirection), so the
-ramp is stable across type changes and every export.
+There are **six heading levels (H1–H6)** plus body text, forming a visibly stepped ramp:
+each level is unmistakably larger than the one below it (Word-style). The scale lives in
+**one single source of truth**, `apps/web/src/features/editor/headingScale.ts`, so the
+editor, the read-only/preview view and every export read the *same* numbers and can never
+drift apart:
 
-| Element   | Token pair                    | Size / line-height        | Weight | Tracking |
-| --------- | ----------------------------- | ------------------------- | ------ | -------- |
-| Title     | `--title-size` / `--title-lh` | 40px / 48px               | 600    | -0.02em  |
-| H1        | `--h1-size` / `--h1-lh`       | 30px / 38px               | 600    | -0.02em  |
-| H2        | `--h2-size` / `--h2-lh`       | 24px / 32px               | 600    | -0.01em  |
-| H3        | `--h3-size` / `--h3-lh`       | 19px / 28px               | 600    | -0.01em  |
-| Paragraph | —                             | 17px / 28px               | 400    | default  |
-| Code      | —                             | 14px / 22px (JetBrains)    | 400    | default  |
+- The live editor **and** the read-only view are the same `.weft-page-content` DOM (the
+  `<Editor>` component with `editable={false}`), styled from the `--hN-*` custom properties
+  that `headingScale.ts` publishes onto `document.head` at load. `editor.css` sets an
+  absolute `font-size`/`line-height`/`font-weight`/`margin-top` per level directly from
+  those tokens (not via BlockNote's fragile `--level` indirection), so the ramp is stable
+  across type changes.
+- Exports (`exporters.ts`) import the same object — `headingScaleExportCss()` for HTML/PDF,
+  and native stepped Word heading styles for DOCX.
 
-Heading weight is a shared token `--h-weight` (600). Headings render in Space Grotesk in
-the default/serif and sans page fonts; in the mono page font they follow the body face.
+BlockNote's built-in heading block caps `level` at **1–3**, which is why levels 4–6 never
+rendered; `features/editor/heading.ts` replaces it with a six-level block (same `type` and
+prop shape, so existing content/collab/undo are untouched), keeping the `#`…`######`
+markdown shortcuts and `Mod-Alt-1..6`.
+
+Sizes are rem against the 16px document root (so 2.25rem = 36px):
+
+| Element | Size            | Weight | Line height | Space above |
+| ------- | --------------- | ------ | ----------- | ----------- |
+| Title   | 40px (`--title-size`) | 600 | 48px    | —           |
+| H1      | 2.25rem (36px)  | 700    | 1.2         | 2rem        |
+| H2      | 1.75rem (28px)  | 700    | 1.25        | 1.6rem      |
+| H3      | 1.375rem (22px) | 600    | 1.3         | 1.3rem      |
+| H4      | 1.125rem (18px) | 600    | 1.4         | 1.1rem      |
+| H5      | 1rem (16px)     | 600    | 1.4         | 1rem        |
+| H6      | 0.875rem (14px) | 600    | 1.4         | 1rem        |
+| Body    | 1rem (16px)     | 400    | 1.6         | 0.5rem      |
+| Code    | 14px (JetBrains)| 400    | —           | —           |
+
+Headings render in Space Grotesk in the default/serif and sans page fonts; in the mono page
+font they follow the body face. (Note: per this scale H6 at 14px sits just below the 16px
+body — the two are told apart by weight, 600 vs 400.)
 
 ### 3.3 Page font family (per-page, Notion-style)
 

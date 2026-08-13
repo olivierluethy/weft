@@ -218,6 +218,10 @@ Focus ring: `0 0 0 2px var(--paper), 0 0 0 4px var(--thread)` (2px offset halo).
   can see how deep a branch runs. A hovered subtree also gets a faint `--thread-soft` wash.
 - **Brand mark:** three interlaced threads forming a "W"-adjacent weave (see `packages`/
   `apps/web/public`). Stroke uses `--thread`; one crossing thread uses `--madder`.
+- **Block nesting guides:** inside the editor, nested blocks draw the same 1px `--line`
+  vertical guide per indent level, brightening to `--thread` at 40% when the nested
+  subtree is hovered. Every block indents with **Tab** / drag-right and outdents with
+  **Shift+Tab** / drag-left, for normal blocks and list items alike.
 - **Cover texture:** page covers without an image fall back to a faint diagonal weave
   pattern generated from `--sunk`/`--line`.
 - **Loading/logo:** threads animate in and interlace (respects `prefers-reduced-motion`).

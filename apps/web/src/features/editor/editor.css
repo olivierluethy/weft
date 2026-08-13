@@ -87,6 +87,18 @@
   border-radius: 8px;
 }
 
+/* Woven indent guides for nested blocks (STYLEGUIDE.md §5). Every block can be
+ * indented (Tab / drag right) and outdented (Shift+Tab / drag left); a 1px guide
+ * makes each nesting level legible, brightening to the thread accent on hover of
+ * the nested subtree. BlockNote reserves this ::before slot at left:-20px. */
+.weft-page-content .bn-block-group .bn-block-group > .bn-block-outer::before {
+  border-left: 1px solid var(--line);
+  transition: border-color 0.12s ease;
+}
+.weft-page-content .bn-block-group .bn-block-group:hover > .bn-block-outer::before {
+  border-left-color: color-mix(in srgb, var(--thread) 40%, transparent);
+}
+
 /* Placeholder + link colours from tokens. */
 .weft-page-content .bn-inline-content a {
   color: var(--thread);

@@ -289,14 +289,7 @@ encode the styleguide's interactive states.
 
 ## 8. Known gaps & suggested next steps
 
-These are implemented in the **backend** but have **no or minimal frontend** yet:
-- **Tags/labels UI** — API is complete (`routes/tags.ts`); the page has no tag editor and the
-  header only *renders* existing tags. Add a tag control in `PageHeader`.
-- **Create-from-template picker** — "Save as template" exists (`PageRowMenu`), and
-  `POST /pages { templateId }` instantiates one; there's no UI to pick a template when
-  creating a page. `GET /workspaces/:id/templates` is ready.
-
-Other worthwhile follow-ups:
+Worthwhile follow-ups:
 - **Collab hardening:** authenticate the Hocuspocus socket (verify the access JWT in
   `onAuthenticate`) and optionally persist the Yjs state for offline-first before public
   deployment.
@@ -336,6 +329,8 @@ Other worthwhile follow-ups:
 | Work on the page header / covers | `features/editor/PageHeader.tsx`, `cover.ts`, `CoverReposition.tsx`, `PathBar.tsx` |
 | Work on the sidebar / tree / DnD | `features/app/Sidebar.tsx`, `PageTree.tsx`, `AppShell.tsx` |
 | Work on search | `apps/server/src/routes/search.ts`, `features/app/CommandPalette.tsx`, `features/search/*` |
+| Work on tags | `features/editor/TagEditor.tsx`, `apps/server/src/routes/tags.ts` |
+| Work on templates / new-page | `features/app/TemplatePicker.tsx`, `useCreatePage.ts`; instantiation in `routes/pages.ts` |
 | Work on export/import | `features/export/exporters.ts` |
 | Work on sharing / public view | `routes/share.ts`, `routes/public.ts`, `features/share/*` |
 | Change run/setup behaviour | `scripts/setup.mjs`, root `package.json`, `.env.example` |

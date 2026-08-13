@@ -1,0 +1,263 @@
+/* Self-hosted fonts (work offline). */
+@import '@fontsource/space-grotesk/400.css';
+@import '@fontsource/space-grotesk/500.css';
+@import '@fontsource/space-grotesk/600.css';
+@import '@fontsource/space-grotesk/700.css';
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/newsreader/400.css';
+@import '@fontsource/newsreader/500.css';
+@import '@fontsource/newsreader/600.css';
+@import '@fontsource/newsreader/400-italic.css';
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/500.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Design tokens (see docs/STYLEGUIDE.md) ──────────────────────────── */
+:root {
+  --thread: #2e4374;
+  --thread-hover: #37518f;
+  --thread-soft: #e7eaf3;
+  --madder: #b4552d;
+  --madder-soft: #f6e7df;
+
+  --paper: #fcfbf9;
+  --surface: #ffffff;
+  --sunk: #f4f2ee;
+  --line: #e7e4de;
+  --line-strong: #d8d4cc;
+  --ink: #211f1c;
+  --ink-muted: #6b6660;
+  --ink-faint: #9a948c;
+
+  --ok: #3c7a57;
+  --ok-soft: #e4f0e9;
+  --warn: #9a6c15;
+  --warn-soft: #f6edd8;
+  --danger: #b23a3a;
+  --danger-soft: #f6e1e1;
+
+  --diff-add: #3c7a57;
+  --diff-add-bg: #e4f0e9;
+  --diff-del: #b23a3a;
+  --diff-del-bg: #f6e1e1;
+
+  color-scheme: light;
+}
+
+:root:not([data-theme='light']) {
+  @media (prefers-color-scheme: dark) {
+    --thread: #8ca2db;
+    --thread-hover: #a6b8e6;
+    --thread-soft: #28304a;
+    --madder: #d98a63;
+    --madder-soft: #3a2a21;
+    --paper: #1a1917;
+    --surface: #232120;
+    --sunk: #161514;
+    --line: #343230;
+    --line-strong: #413e3b;
+    --ink: #ece9e3;
+    --ink-muted: #a39d95;
+    --ink-faint: #6e6862;
+    --ok: #6bbd90;
+    --ok-soft: #1f2e26;
+    --warn: #d6a94a;
+    --warn-soft: #2e2716;
+    --danger: #e07a7a;
+    --danger-soft: #2e1a1a;
+    --diff-add: #6bbd90;
+    --diff-add-bg: #1c2b22;
+    --diff-del: #e07a7a;
+    --diff-del-bg: #2e1a1a;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --thread: #8ca2db;
+  --thread-hover: #a6b8e6;
+  --thread-soft: #28304a;
+  --madder: #d98a63;
+  --madder-soft: #3a2a21;
+  --paper: #1a1917;
+  --surface: #232120;
+  --sunk: #161514;
+  --line: #343230;
+  --line-strong: #413e3b;
+  --ink: #ece9e3;
+  --ink-muted: #a39d95;
+  --ink-faint: #6e6862;
+  --ok: #6bbd90;
+  --ok-soft: #1f2e26;
+  --warn: #d6a94a;
+  --warn-soft: #2e2716;
+  --danger: #e07a7a;
+  --danger-soft: #2e1a1a;
+  --diff-add: #6bbd90;
+  --diff-add-bg: #1c2b22;
+  --diff-del: #e07a7a;
+  --diff-del-bg: #2e1a1a;
+  color-scheme: dark;
+}
+
+@layer base {
+  * {
+    border-color: var(--line);
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: Inter, system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 24px;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection {
+    background: var(--thread-soft);
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--line-strong);
+    border-radius: 999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--ink-faint);
+    background-clip: content-box;
+  }
+  :focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px var(--paper),
+      0 0 0 4px var(--thread);
+    border-radius: 4px;
+  }
+}
+
+@layer components {
+  /* The weave: diagonal thread texture used for coverless page headers. */
+  .weave-texture {
+    background-image:
+      repeating-linear-gradient(45deg, var(--line) 0 1px, transparent 1px 9px),
+      repeating-linear-gradient(-45deg, var(--line) 0 1px, transparent 1px 9px);
+    background-color: var(--sunk);
+  }
+
+  .btn {
+    @apply inline-flex select-none items-center justify-center gap-2 rounded font-medium transition;
+    height: 32px;
+    padding: 0 12px;
+    font-size: 13px;
+    transition-timing-function: cubic-bezier(0.2, 0.6, 0.2, 1);
+  }
+  .btn-primary {
+    background: var(--thread);
+    color: #fff;
+  }
+  .btn-primary:hover {
+    background: var(--thread-hover);
+  }
+  .btn-secondary {
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--line-strong);
+  }
+  .btn-secondary:hover {
+    background: var(--sunk);
+  }
+  .btn-ghost {
+    color: var(--ink-muted);
+  }
+  .btn-ghost:hover {
+    background: var(--sunk);
+    color: var(--ink);
+  }
+  .btn-danger {
+    background: var(--danger);
+    color: #fff;
+  }
+  .btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  .input {
+    @apply w-full rounded;
+    height: 32px;
+    padding: 0 10px;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    color: var(--ink);
+    font-size: 14px;
+  }
+  .input::placeholder {
+    color: var(--ink-faint);
+  }
+  .field-label {
+    @apply mb-1 block;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ink-muted);
+    letter-spacing: 0.02em;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+  }
+  .kbd {
+    @apply inline-flex items-center justify-center rounded-sm font-mono;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    font-size: 11px;
+    background: var(--sunk);
+    border: 1px solid var(--line-strong);
+    color: var(--ink-muted);
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes slidein {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

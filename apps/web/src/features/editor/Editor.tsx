@@ -11,10 +11,27 @@ import {
 import { filterSuggestionItems, insertOrUpdateBlock } from '@blocknote/core';
 import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/mantine/style.css';
-import { FileText, Heading } from 'lucide-react';
+import {
+  FileText,
+  Heading1,
+  Heading2,
+  Heading3,
+  Heading4,
+  Heading5,
+  Heading6,
+} from 'lucide-react';
 import './editor.css';
 // Side-effect: publishes the H1–H6 type scale as CSS custom properties.
-import { HEADING_LABELS } from './headingScale';
+import { HEADING_LABELS, HEADING_LEVELS, type HeadingLevel } from './headingScale';
+
+const HEADING_ICONS: Record<HeadingLevel, typeof Heading1> = {
+  1: Heading1,
+  2: Heading2,
+  3: Heading3,
+  4: Heading4,
+  5: Heading5,
+  6: Heading6,
+};
 import { api } from '@/lib/api';
 import { hashHue } from '@/lib/utils';
 import { computeStats, type DocStats } from './stats';
@@ -108,23 +125,27 @@ export function Editor({
   const getSlashItems = async (query: string): Promise<DefaultReactSuggestionItem[]> => {
     const defaults = getDefaultReactSlashMenuItems(editor);
 
-    // BlockNote's defaults only expose Heading 1–3; surface 4–6 too (the schema
-    // now supports the full six-level scale). Slot them into the same group,
-    // right after the last built-in heading item so the ramp reads in order.
-    const headingGroup = defaults.find((d) => d.title?.startsWith('Heading'))?.group;
-    const extraHeadings: DefaultReactSuggestionItem[] = [4, 5, 6].map((level) => ({
-      title: HEADING_LABELS[level as 4 | 5 | 6],
-      subtext: `Level ${level} heading`,
-      group: headingGroup,
-      aliases: [`h${level}`, `heading${level}`],
-      icon: <Heading size={18} />,
-      onItemClick: () => insertOrUpdateBlock(editor, { type: 'heading', props: { level: level as never } }),
-    }));
-    const lastHeading = defaults.map((d) => d.title?.startsWith('Heading') ?? false).lastIndexOf(true);
-    const withHeadings =
-      lastHeading === -1
-        ? [...defaults, ...extraHeadings]
-        : [...defaults.slice(0, lastHeading + 1), ...extraHeadings, ...defaults.slice(lastHeading + 1)];
+    // Provide all six heading levels ourselves. BlockNote only ships Heading 1–3
+    // and gates even those behind `checkDefaultBlockTypeInSchema("heading")`, a
+    // *reference-equality* check against its built-in heading block. Because
+    // Weft swaps in a six-level heading block (weftSchema), that check fails and
+    // BlockNote drops ALL its default heading items — which is why only 4–6 (the
+    // ones we used to add manually) showed up. So we own the full set here,
+    // grouped and ordered H1→H6, and drop any stray built-in heading items.
+    const headingGroup = editor.dictionary.slash_menu.heading.group;
+    const headingItems: DefaultReactSuggestionItem[] = HEADING_LEVELS.map((level) => {
+      const Icon = HEADING_ICONS[level];
+      return {
+        title: HEADING_LABELS[level],
+        subtext: `Level ${level} heading`,
+        group: headingGroup,
+        aliases: [`h${level}`, `heading${level}`, `heading ${level}`],
+        icon: <Icon size={18} />,
+        onItemClick: () => insertOrUpdateBlock(editor, { type: 'heading', props: { level: level as never } }),
+      };
+    });
+    const nonHeadingDefaults = defaults.filter((d) => !d.title?.startsWith('Heading'));
+    const withHeadings = [...headingItems, ...nonHeadingDefaults];
 
     const pageItem: DefaultReactSuggestionItem = {
       title: 'Page',

@@ -13,6 +13,8 @@ import { GlobalStyles } from '@/features/app/GlobalStyles';
 import { Spinner } from '@/components/ui/Spinner';
 import { Editor } from './Editor';
 import { PageHeader } from './PageHeader';
+import { Outline } from './Outline';
+import type { OutlineHeading } from './outline';
 import { computeStats, type DocStats } from './stats';
 
 export function PageView() {
@@ -23,6 +25,7 @@ export function PageView() {
   const { workspaceId } = useWorkspace();
   const invalidate = useInvalidate();
   const [stats, setStats] = useState<DocStats>(() => computeStats([]));
+  const [headings, setHeadings] = useState<OutlineHeading[]>([]);
   const contentRef = useRef<unknown>(null);
 
   const page = data?.page;
@@ -78,6 +81,7 @@ export function PageView() {
   return (
     <div
       className="relative h-full overflow-y-auto"
+      data-page-font={page.fontFamily ?? 'serif'}
       style={
         page.backgroundUrl
           ? {
@@ -114,10 +118,13 @@ export function PageView() {
           user={{ id: user.id, name: user.name }}
           onSave={saveContent}
           onStats={setStats}
+          onHeadings={setHeadings}
         />
 
         <Backlinks pageId={pageId!} />
       </div>
+
+      <Outline headings={headings} />
     </div>
   );
 }

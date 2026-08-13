@@ -18,6 +18,7 @@ export interface PageDetail {
   isLocked: boolean;
   isFullWidth: boolean;
   width: number;
+  fontFamily: 'serif' | 'sans' | 'mono';
   isFavorite: boolean;
   updatedAt: string;
   tags: { id: string; name: string; color: string }[];

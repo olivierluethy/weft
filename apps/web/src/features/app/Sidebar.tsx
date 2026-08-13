@@ -79,7 +79,7 @@ export function Sidebar({
 
   return (
     <aside
-      className="relative flex shrink-0 flex-col border-r border-line bg-sunk"
+      className="relative flex h-full min-h-0 shrink-0 flex-col border-r border-line bg-sunk"
       style={{ width }}
     >
       {/* Workspace switcher */}
@@ -143,8 +143,8 @@ export function Sidebar({
         </button>
       </div>
 
-      {/* Scroll area */}
-      <div className="mt-2 flex-1 overflow-y-auto px-2 pb-2">
+      {/* Scroll area — the only scrolling region; footer stays anchored below. */}
+      <div className="mt-2 min-h-0 flex-1 overflow-y-auto px-2 pb-2">
         <div className="mb-1 flex items-center gap-0.5">
           <button
             onClick={() => void createPage()}

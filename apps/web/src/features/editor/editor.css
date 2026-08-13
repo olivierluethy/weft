@@ -9,7 +9,7 @@
 .weft-page-content .bn-editor {
   padding-inline: 0;
   background: transparent;
-  font-family: Newsreader, Georgia, serif;
+  font-family: var(--wf-body-font);
 }
 
 /* The editor content must sit flat like Notion — no container border and no
@@ -39,7 +39,7 @@
 
 .weft-page-content .bn-block-content,
 .weft-page-content .bn-inline-content {
-  font-family: Newsreader, Georgia, serif;
+  font-family: var(--wf-body-font);
   font-size: 17px;
   line-height: 28px;
   color: var(--ink);
@@ -49,6 +49,30 @@
   font-family: 'Space Grotesk', system-ui, sans-serif;
   letter-spacing: -0.01em;
   color: var(--ink);
+}
+
+/* Distinct, tokenised heading scale (docs/STYLEGUIDE.md §3.2).
+ * BlockNote sizes headings from a relative `--level` (3em/2em/1.3em) via a rule
+ * of specificity 0,5,0. We override `--level` with an absolute token — which
+ * feeds BlockNote's own `font-size: var(--level)` — and set line-height / weight
+ * at 0,6,0 so the hierarchy is unmistakable and matches exports. */
+.weft-page-content .bn-block-outer > .bn-block > .bn-block-content[data-content-type='heading'][data-level='1'] {
+  --level: var(--h1-size);
+  line-height: var(--h1-lh);
+  font-weight: var(--h-weight);
+  letter-spacing: -0.02em;
+}
+.weft-page-content .bn-block-outer > .bn-block > .bn-block-content[data-content-type='heading'][data-level='2'] {
+  --level: var(--h2-size);
+  line-height: var(--h2-lh);
+  font-weight: var(--h-weight);
+  letter-spacing: -0.01em;
+}
+.weft-page-content .bn-block-outer > .bn-block > .bn-block-content[data-content-type='heading'][data-level='3'] {
+  --level: var(--h3-size);
+  line-height: var(--h3-lh);
+  font-weight: var(--h-weight);
+  letter-spacing: -0.01em;
 }
 
 /* Code blocks + inline code in the mono face. */
@@ -63,6 +87,18 @@
   border-radius: 8px;
 }
 
+/* Woven indent guides for nested blocks (STYLEGUIDE.md §5). Every block can be
+ * indented (Tab / drag right) and outdented (Shift+Tab / drag left); a 1px guide
+ * makes each nesting level legible, brightening to the thread accent on hover of
+ * the nested subtree. BlockNote reserves this ::before slot at left:-20px. */
+.weft-page-content .bn-block-group .bn-block-group > .bn-block-outer::before {
+  border-left: 1px solid var(--line);
+  transition: border-color 0.12s ease;
+}
+.weft-page-content .bn-block-group .bn-block-group:hover > .bn-block-outer::before {
+  border-left-color: color-mix(in srgb, var(--thread) 40%, transparent);
+}
+
 /* Placeholder + link colours from tokens. */
 .weft-page-content .bn-inline-content a {
   color: var(--thread);
@@ -71,6 +107,15 @@
 .weft-page-content [data-is-empty-and-focused] .bn-inline-content::before,
 .weft-page-content .bn-block-content[data-is-empty]::before {
   color: var(--ink-faint);
+}
+
+/* Page title follows the page font for the non-default faces (the serif default
+ * keeps its Space Grotesk display look untouched). */
+[data-page-font='sans'] .weft-title {
+  font-family: Inter, system-ui, sans-serif;
+}
+[data-page-font='mono'] .weft-title {
+  font-family: var(--wf-mono-font);
 }
 
 /* Collaboration carets. */

@@ -142,14 +142,40 @@ Fonts are self-hosted via `@fontsource` packages so the app works fully offline.
 
 ### 3.2 Editor content scale (Newsreader)
 
-| Element   | Size / line-height        | Weight |
-| --------- | ------------------------- | ------ |
-| Title     | 40px / 48px               | 600    |
-| H1        | 30px / 38px               | 600    |
-| H2        | 24px / 32px               | 600    |
-| H3        | 19px / 28px               | 600    |
-| Paragraph | 17px / 28px               | 400    |
-| Code      | 14px / 22px (JetBrains)    | 400    |
+The heading scale is tokenised so the editor, exports (HTML/PDF/DOCX) and print all
+render the same visual hierarchy. Headings **must** be visibly distinct, stepping down
+from title to body. BlockNote's default relative (`em`) heading sizes are overridden by
+these tokens.
+
+| Element   | Token pair                    | Size / line-height        | Weight | Tracking |
+| --------- | ----------------------------- | ------------------------- | ------ | -------- |
+| Title     | `--title-size` / `--title-lh` | 40px / 48px               | 600    | -0.02em  |
+| H1        | `--h1-size` / `--h1-lh`       | 30px / 38px               | 600    | -0.02em  |
+| H2        | `--h2-size` / `--h2-lh`       | 24px / 32px               | 600    | -0.01em  |
+| H3        | `--h3-size` / `--h3-lh`       | 19px / 28px               | 600    | -0.01em  |
+| Paragraph | —                             | 17px / 28px               | 400    | default  |
+| Code      | —                             | 14px / 22px (JetBrains)    | 400    | default  |
+
+Heading weight is a shared token `--h-weight` (600). Headings render in Space Grotesk in
+the default/serif and sans page fonts; in the mono page font they follow the body face.
+
+### 3.3 Page font family (per-page, Notion-style)
+
+Font family is a **page-level** setting (`Page.fontFamily`), chosen from a curated set and
+persisted per page. The default preserves Weft's existing look exactly. Switching the page
+font re-faces the whole page voice — title, headings and body — while the tokenised heading
+**sizes** (§3.2) stay fixed, so hierarchy never depends on the chosen family.
+
+| Key      | Page face (title / headings / body) | Label   |
+| -------- | ----------------------------------- | ------- |
+| `serif`  | Newsreader (default)                | Serif   |
+| `sans`   | Inter                               | Sans    |
+| `mono`   | JetBrains Mono                      | Mono    |
+
+The active face is driven by a `--wf-body-font` token, switched by a
+`data-page-font="serif|sans|mono"` attribute on the page container; `serif` is the no-op
+default and leaves the current design untouched. The picker lives in the page action bar
+(a `Type` icon). Exports (HTML/PDF/DOCX) carry the same face.
 
 Display type uses tight tracking (`-0.02em` on titles/H1). Body uses default tracking.
 
@@ -192,6 +218,10 @@ Focus ring: `0 0 0 2px var(--paper), 0 0 0 4px var(--thread)` (2px offset halo).
   can see how deep a branch runs. A hovered subtree also gets a faint `--thread-soft` wash.
 - **Brand mark:** three interlaced threads forming a "W"-adjacent weave (see `packages`/
   `apps/web/public`). Stroke uses `--thread`; one crossing thread uses `--madder`.
+- **Block nesting guides:** inside the editor, nested blocks draw the same 1px `--line`
+  vertical guide per indent level, brightening to `--thread` at 40% when the nested
+  subtree is hovered. Every block indents with **Tab** / drag-right and outdents with
+  **Shift+Tab** / drag-left, for normal blocks and list items alike.
 - **Cover texture:** page covers without an image fall back to a faint diagonal weave
   pattern generated from `--sunk`/`--line`.
 - **Loading/logo:** threads animate in and interlace (respects `prefers-reduced-motion`).
@@ -220,7 +250,24 @@ with `--thread` text. Section headers `text-2xs` `--ink-faint` uppercase.
 
 **Sidebar** — `--sunk` background, `280px` default (resizable). Row height 30px, `text-sm`.
 Hover `--surface`; active page `--thread-soft` fill + `--thread` text + 2px `--thread` left bar.
-Favourites use a `--madder` star.
+Favourites use a `--madder` star. The sidebar fills the full viewport height as a flex
+column: the page tree is the only scrolling region (`min-h-0` + `overflow-y-auto`), while
+the workspace switcher, search and footer (Graph / Members / Trash / user) stay anchored.
+Never let the tree clip against a hard edge — long trees scroll inside their region.
+
+- **Row actions** — each page row exposes an action cluster (`⋯` menu + `＋` add-inside)
+  that is hidden by default and revealed on `group-hover` **and** `group-focus-within` so
+  it is keyboard reachable. The `＋` creates a child page under that row, auto-expands the
+  parent, and opens the new page for editing. Icons `--ink-faint` → `--ink` on hover, hit
+  target ≥ 20px. Every row action carries an `aria-label`/`title`.
+
+**Outline / table of contents** — a right-side rail listing the current page's headings in
+document order. Fixed to the right gutter, `hidden` below `xl`, width ~220px. Rows are
+`text-sm`, indented by heading level (H1 flush, H2 +12px, H3 +24px). Idle rows are
+`--ink-faint`; the heading currently in view is `--ink` with a 2px `--thread` left marker
+(same active language as the sidebar). Clicking a row smooth-scrolls to the heading and
+flashes it (`--flash-bg`). The list updates live as headings change and collapses to
+nothing when the page has no headings.
 
 **Cards / callouts** — `--surface`, `1px --line`, `rounded-md`. Callouts tint their
 background from the chosen colour at ~10% and border at ~24%.

@@ -52,7 +52,32 @@
   --scrim: rgba(255, 255, 255, 0.9);
   --scrim-ink: #211f1c;
 
+  /* Editor heading scale (see docs/STYLEGUIDE.md §3.2) — theme-agnostic. */
+  --title-size: 40px;
+  --title-lh: 48px;
+  --h1-size: 30px;
+  --h1-lh: 38px;
+  --h2-size: 24px;
+  --h2-lh: 32px;
+  --h3-size: 19px;
+  --h3-lh: 28px;
+  --h-weight: 600;
+
+  /* Page body face (per-page font family, see docs/STYLEGUIDE.md §3.3).
+   * Default = Newsreader serif; overridden per page by [data-page-font]. */
+  --wf-body-font: Newsreader, Georgia, serif;
+  --wf-mono-font: 'JetBrains Mono', ui-monospace, monospace;
+
   color-scheme: light;
+}
+
+/* Per-page font family. `serif` is the default (no override); the page
+ * container carries data-page-font and the value inherits into the editor. */
+[data-page-font='sans'] {
+  --wf-body-font: Inter, system-ui, sans-serif;
+}
+[data-page-font='mono'] {
+  --wf-body-font: var(--wf-mono-font);
 }
 
 :root:not([data-theme='light']) {

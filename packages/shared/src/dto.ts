@@ -61,6 +61,7 @@ export const updatePageSchema = z.object({
   isLocked: z.boolean().optional(),
   isFullWidth: z.boolean().optional(),
   width: z.number().min(400).max(1400).optional(),
+  fontFamily: z.enum(['serif', 'sans', 'mono']).optional(),
   customCss: z.string().nullable().optional(),
   isFavorite: z.boolean().optional(),
 });

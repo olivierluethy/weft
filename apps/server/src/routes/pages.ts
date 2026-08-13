@@ -71,6 +71,7 @@ async function clonePage(
       content: src.content ?? undefined,
       customCss: src.customCss,
       width: src.width,
+      fontFamily: src.fontFamily,
       isFullWidth: src.isFullWidth,
       isTemplate: asTemplate,
       position: position ?? (await nextPosition(workspaceId, parentId)),

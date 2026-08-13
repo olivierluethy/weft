@@ -45,6 +45,27 @@ import { SNAPSHOT_DEBOUNCE_MS } from '@weft/shared';
 
 const colorFor = (id: string) => `hsl(${hashHue(id)} 55% 45%)`;
 
+/** Clear the collaborative (Yjs) undo stack. Undo/redo under collaboration is the
+ * y-prosemirror UndoManager living in a ProseMirror plugin; we locate it by
+ * duck-typing the plugin states and call `.clear()`. Used after the initial
+ * content hydration so it isn't undoable. Best-effort — never throws. */
+function clearCollabUndoHistory(editor: unknown): void {
+  try {
+    const view = (editor as { prosemirrorView?: { state?: unknown }; _tiptapEditor?: { view?: { state?: unknown } } })
+      .prosemirrorView ?? (editor as { _tiptapEditor?: { view?: { state?: unknown } } })._tiptapEditor?.view;
+    const state = (view as { state?: { plugins?: Array<{ getState?: (s: unknown) => unknown }> } })?.state;
+    for (const plugin of state?.plugins ?? []) {
+      const pstate = plugin.getState?.(state) as { undoManager?: { clear?: () => void } } | undefined;
+      if (pstate?.undoManager?.clear) {
+        pstate.undoManager.clear();
+        return;
+      }
+    }
+  } catch {
+    /* undo manager not present / shape drift — ignore */
+  }
+}
+
 function effectiveTheme(pref: string): 'light' | 'dark' {
   if (pref === 'dark') return 'dark';
   if (pref === 'light') return 'light';
@@ -207,6 +228,9 @@ export function Editor({
         meta.set('seeded', true);
         try {
           editor.replaceBlocks(editor.document, initialContent as never);
+          // The initial hydration is not a user edit — drop it from the collab
+          // undo stack so opening a page and pressing Ctrl+Z can't wipe it.
+          clearCollabUndoHistory(editor);
         } catch {
           /* content shape drift — ignore */
         }

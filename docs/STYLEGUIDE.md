@@ -305,7 +305,13 @@ document order. Fixed to the right gutter, `hidden` below `xl`, width ~220px. Ro
 `--ink-faint`; the heading currently in view is `--ink` with a 2px `--thread` left marker
 (same active language as the sidebar). Clicking a row smooth-scrolls to the heading and
 flashes it (`--flash-bg`). The list updates live as headings change and collapses to
-nothing when the page has no headings.
+nothing when the page has no headings. Its `top` is derived from the live position of the
+first content block (`.weft-page-content`), clamped to a minimum (88px) — so it starts level
+with the first body line, sits on the page background below the cover image, and pins while
+scrolling **without ever riding up over the cover**. When the page is editable, each row is
+draggable (a `GripVertical` handle appears on hover) with a `--thread` drop line; dropping
+reorders the heading's whole **section** (the heading plus following blocks up to the next
+heading of equal-or-higher level) in the document, which then re-renders the outline.
 
 **Sub-page block** — an inline child-page reference placed in the editor via the `/page`
 slash command (group _Basic blocks_). It creates a real child page (nested in the sidebar

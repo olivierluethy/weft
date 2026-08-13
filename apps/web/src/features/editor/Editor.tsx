@@ -11,8 +11,27 @@ import {
 import { filterSuggestionItems, insertOrUpdateBlock } from '@blocknote/core';
 import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/mantine/style.css';
-import { FileText } from 'lucide-react';
+import {
+  FileText,
+  Heading1,
+  Heading2,
+  Heading3,
+  Heading4,
+  Heading5,
+  Heading6,
+} from 'lucide-react';
 import './editor.css';
+// Side-effect: publishes the H1–H6 type scale as CSS custom properties.
+import { HEADING_LABELS, HEADING_LEVELS, type HeadingLevel } from './headingScale';
+
+const HEADING_ICONS: Record<HeadingLevel, typeof Heading1> = {
+  1: Heading1,
+  2: Heading2,
+  3: Heading3,
+  4: Heading4,
+  5: Heading5,
+  6: Heading6,
+};
 import { api } from '@/lib/api';
 import { hashHue } from '@/lib/utils';
 import { computeStats, type DocStats } from './stats';
@@ -105,6 +124,29 @@ export function Editor({
   // child page (nested in the sidebar tree) and drops a link block to it here.
   const getSlashItems = async (query: string): Promise<DefaultReactSuggestionItem[]> => {
     const defaults = getDefaultReactSlashMenuItems(editor);
+
+    // Provide all six heading levels ourselves. BlockNote only ships Heading 1–3
+    // and gates even those behind `checkDefaultBlockTypeInSchema("heading")`, a
+    // *reference-equality* check against its built-in heading block. Because
+    // Weft swaps in a six-level heading block (weftSchema), that check fails and
+    // BlockNote drops ALL its default heading items — which is why only 4–6 (the
+    // ones we used to add manually) showed up. So we own the full set here,
+    // grouped and ordered H1→H6, and drop any stray built-in heading items.
+    const headingGroup = editor.dictionary.slash_menu.heading.group;
+    const headingItems: DefaultReactSuggestionItem[] = HEADING_LEVELS.map((level) => {
+      const Icon = HEADING_ICONS[level];
+      return {
+        title: HEADING_LABELS[level],
+        subtext: `Level ${level} heading`,
+        group: headingGroup,
+        aliases: [`h${level}`, `heading${level}`, `heading ${level}`],
+        icon: <Icon size={18} />,
+        onItemClick: () => insertOrUpdateBlock(editor, { type: 'heading', props: { level: level as never } }),
+      };
+    });
+    const nonHeadingDefaults = defaults.filter((d) => !d.title?.startsWith('Heading'));
+    const withHeadings = [...headingItems, ...nonHeadingDefaults];
+
     const pageItem: DefaultReactSuggestionItem = {
       title: 'Page',
       subtext: 'Create a sub-page nested in this one',
@@ -127,11 +169,11 @@ export function Editor({
       },
     };
     // Keep the "Basic blocks" group contiguous by slotting Page after its last member.
-    const lastBasic = defaults.map((d) => d.group).lastIndexOf('Basic blocks');
+    const lastBasic = withHeadings.map((d) => d.group).lastIndexOf('Basic blocks');
     const merged =
       lastBasic === -1
-        ? [...defaults, pageItem]
-        : [...defaults.slice(0, lastBasic + 1), pageItem, ...defaults.slice(lastBasic + 1)];
+        ? [...withHeadings, pageItem]
+        : [...withHeadings.slice(0, lastBasic + 1), pageItem, ...withHeadings.slice(lastBasic + 1)];
     return filterSuggestionItems(merged, query);
   };
 

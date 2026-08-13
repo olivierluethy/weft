@@ -13,7 +13,8 @@ export function CoverPicker({
   workspaceId,
 }: {
   onPick: (url: string) => void;
-  onRemove: () => void;
+  /** Omit to hide the Remove control — e.g. when no cover is set yet. */
+  onRemove?: () => void;
   workspaceId: string;
 }) {
   const [tab, setTab] = useState<Tab>('search');
@@ -35,12 +36,14 @@ export function CoverPicker({
           <Tab_ icon={<Upload size={14} />} label="Upload" active={tab === 'upload'} onClick={() => setTab('upload')} />
           <Tab_ icon={<Link2 size={14} />} label="Link" active={tab === 'url'} onClick={() => setTab('url')} />
         </div>
-        <button
-          onClick={onRemove}
-          className="flex items-center gap-1 rounded px-2 py-1 text-xs text-ink-faint transition hover:bg-sunk hover:text-danger"
-        >
-          <Trash2 size={13} /> Remove
-        </button>
+        {onRemove && (
+          <button
+            onClick={onRemove}
+            className="flex items-center gap-1 rounded px-2 py-1 text-xs text-ink-faint transition hover:bg-sunk hover:text-danger"
+          >
+            <Trash2 size={13} /> Remove
+          </button>
+        )}
       </div>
       <div className="p-3">
         {tab === 'search' && <ImageSearch onPick={onPick} />}

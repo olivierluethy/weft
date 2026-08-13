@@ -34,7 +34,8 @@ export function IconPicker({
   workspaceId,
 }: {
   onPick: (value: string) => void;
-  onRemove: () => void;
+  /** Omit to hide the Remove control — e.g. when no icon is set yet. */
+  onRemove?: () => void;
   workspaceId: string;
 }) {
   const [tab, setTab] = useState<Tab>('emoji');
@@ -56,12 +57,14 @@ export function IconPicker({
           <TabBtn icon={<Upload size={14} />} label="Upload" active={tab === 'upload'} onClick={() => setTab('upload')} />
           <TabBtn icon={<ImageIcon size={14} />} label="Search" active={tab === 'search'} onClick={() => setTab('search')} />
         </div>
-        <button
-          onClick={onRemove}
-          className="flex items-center gap-1 rounded px-2 py-1 text-xs text-ink-faint transition hover:bg-sunk hover:text-danger"
-        >
-          <Trash2 size={13} /> Remove
-        </button>
+        {onRemove && (
+          <button
+            onClick={onRemove}
+            className="flex items-center gap-1 rounded px-2 py-1 text-xs text-ink-faint transition hover:bg-sunk hover:text-danger"
+          >
+            <Trash2 size={13} /> Remove
+          </button>
+        )}
       </div>
 
       <div className="p-2">

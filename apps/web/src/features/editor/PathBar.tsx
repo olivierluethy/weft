@@ -15,8 +15,18 @@ interface Crumb {
 }
 
 /** Explorer-style breadcrumb: click a segment to jump to that ancestor, copy the
- * full path, or edit it as text and press Enter to navigate anywhere. */
-export function PathBar({ breadcrumbs }: { breadcrumbs: Crumb[] }) {
+ * full path, or edit it as text and press Enter to navigate anywhere. When
+ * `onRenameCurrent` is supplied, clicking the last (current) segment turns it
+ * into an inline field for renaming the page right from the top bar. */
+export function PathBar({
+  breadcrumbs,
+  editable = false,
+  onRenameCurrent,
+}: {
+  breadcrumbs: Crumb[];
+  editable?: boolean;
+  onRenameCurrent?: (title: string) => void;
+}) {
   const navigate = useNavigate();
   const { workspaceId } = useWorkspace();
   const { data: tree } = useTree(workspaceId);
@@ -24,6 +34,23 @@ export function PathBar({ breadcrumbs }: { breadcrumbs: Crumb[] }) {
   const [value, setValue] = useState('');
   const [error, setError] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Inline rename of the current page (the last crumb).
+  const canRenameCurrent = editable && !!onRenameCurrent;
+  const [titleEdit, setTitleEdit] = useState<string | null>(null);
+  const titleRef = useRef<HTMLInputElement>(null);
+  const current = breadcrumbs[breadcrumbs.length - 1];
+
+  const startTitleEdit = () => canRenameCurrent && setTitleEdit(current?.title ?? '');
+  const commitTitleEdit = () => {
+    if (titleEdit === null) return;
+    const next = titleEdit.trim();
+    if (next && next !== (current?.title ?? '')) onRenameCurrent?.(next);
+    setTitleEdit(null);
+  };
+  useEffect(() => {
+    if (titleEdit !== null) titleRef.current?.select();
+  }, [titleEdit]);
 
   const pathString = breadcrumbs.map((c) => c.title || 'Untitled').join(' / ');
 
@@ -116,16 +143,49 @@ export function PathBar({ breadcrumbs }: { breadcrumbs: Crumb[] }) {
       <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
         {breadcrumbs.map((c, i) => {
           const isLast = i === breadcrumbs.length - 1;
+          if (isLast && titleEdit !== null) {
+            return (
+              <span key={c.id} className="flex min-w-0 flex-1 items-center gap-1">
+                {i > 0 && <ChevronRight size={13} className="shrink-0 text-ink-faint" />}
+                {c.icon && <PageIcon icon={c.icon} size={14} />}
+                <input
+                  ref={titleRef}
+                  value={titleEdit}
+                  onChange={(e) => setTitleEdit(e.target.value.replace(/\n/g, ''))}
+                  onBlur={commitTitleEdit}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      e.currentTarget.blur();
+                    } else if (e.key === 'Escape') {
+                      e.preventDefault();
+                      setTitleEdit(null);
+                    }
+                  }}
+                  placeholder="Untitled"
+                  spellCheck={false}
+                  className="min-w-0 flex-1 rounded bg-transparent px-1.5 py-0.5 text-sm font-medium text-ink outline-none ring-1 ring-thread placeholder:text-ink-faint"
+                />
+              </span>
+            );
+          }
           return (
             <span key={c.id} className="flex min-w-0 items-center gap-1">
               {i > 0 && <ChevronRight size={13} className="shrink-0 text-ink-faint" />}
               <button
-                onClick={() => !isLast && navigate(`/p/${c.id}`)}
-                disabled={isLast}
-                title={isLast ? undefined : `Go up to ${c.title || 'Untitled'}`}
+                onClick={() => (isLast ? startTitleEdit() : navigate(`/p/${c.id}`))}
+                disabled={isLast && !canRenameCurrent}
+                title={
+                  isLast
+                    ? canRenameCurrent
+                      ? 'Rename page'
+                      : undefined
+                    : `Go up to ${c.title || 'Untitled'}`
+                }
                 className={cn(
                   'flex items-center gap-1 truncate rounded px-1.5 py-0.5',
                   isLast ? 'font-medium text-ink' : 'hover:bg-sunk',
+                  isLast && canRenameCurrent && 'cursor-text hover:bg-sunk',
                 )}
               >
                 {c.icon && <PageIcon icon={c.icon} size={14} />}

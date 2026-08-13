@@ -93,6 +93,9 @@ export function toMarkdown(blocks: Block[], depth = 0): string {
       case 'divider':
         lines.push(`${pad}---`);
         break;
+      case 'pageLink':
+        lines.push(`${pad}📄 ${b.props?.title || 'Sub-page'}`);
+        break;
       case 'table':
         lines.push(tableToMarkdown(b));
         break;
@@ -154,6 +157,8 @@ function renderHtmlBlock(b: Block): string {
       return `<figure><img src="${b.props?.url ?? ''}" alt="${escapeHtml(b.props?.caption ?? '')}"/>${b.props?.caption ? `<figcaption>${escapeHtml(b.props.caption)}</figcaption>` : ''}</figure>`;
     case 'divider':
       return '<hr/>';
+    case 'pageLink':
+      return `<p>📄 ${escapeHtml(b.props?.title || 'Sub-page')}</p>`;
     case 'table':
       return tableToHtml(b);
     default:
@@ -249,6 +254,8 @@ export async function exportDocx(title: string, blocks: Block[], font: PageFont 
       else if (b.type === 'codeBlock')
         paras.push(new Paragraph({ children: [new TextRun({ text, font: 'JetBrains Mono' })] }));
       else if (b.type === 'divider') paras.push(new Paragraph({ text: '―――――' }));
+      else if (b.type === 'pageLink')
+        paras.push(new Paragraph({ text: `📄 ${b.props?.title || 'Sub-page'}` }));
       else paras.push(new Paragraph({ text }));
       if (Array.isArray(b.children) && b.children.length) walk(b.children, level + 1);
     }

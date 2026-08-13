@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { Prisma } from '@prisma/client';
 import { canEdit } from '@weft/shared';
 import { createVersionSchema } from '@weft/shared';
 import { prisma } from '../db.js';
@@ -89,7 +90,7 @@ export default async function versionRoutes(app: FastifyInstance) {
     await prisma.version.create({
       data: {
         pageId: page.id,
-        content: page.content ?? undefined,
+        content: (page.content ?? Prisma.JsonNull) as Prisma.InputJsonValue,
         kind: 'restore',
         label: 'Before restore',
         wordCount: wordCount(page.content),
@@ -98,7 +99,10 @@ export default async function versionRoutes(app: FastifyInstance) {
     });
     const updated = await prisma.page.update({
       where: { id: page.id },
-      data: { content: version.content, lastEditedById: req.currentUser!.id },
+      data: {
+        content: (version.content ?? Prisma.JsonNull) as Prisma.InputJsonValue,
+        lastEditedById: req.currentUser!.id,
+      },
     });
     return { page: updated };
   });

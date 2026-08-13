@@ -14,10 +14,11 @@ async function breadcrumbs(pageId: string) {
   const guard = new Set<string>();
   while (current && !guard.has(current)) {
     guard.add(current);
-    const p = await prisma.page.findUnique({
-      where: { id: current },
-      select: { id: true, title: true, icon: true, parentId: true },
-    });
+    const p: { id: string; title: string; icon: string | null; parentId: string | null } | null =
+      await prisma.page.findUnique({
+        where: { id: current },
+        select: { id: true, title: true, icon: true, parentId: true },
+      });
     if (!p) break;
     crumbs.unshift({ id: p.id, title: p.title, icon: p.icon });
     current = p.parentId;

@@ -44,13 +44,8 @@ export function welcomeDocument(): unknown[] {
       content: t('Drag pages in the sidebar to nest them'),
       children: [],
     },
-    {
-      id: nanoid(),
-      type: 'callout',
-      props: { textColor: 'default', backgroundColor: 'blue', textAlignment: 'left', icon: '🧵' },
-      content: t('Tip: add a cover and an icon to give this page some character.'),
-      children: [],
-    },
+    block('paragraph', ''),
+    block('paragraph', '🧵 Tip: add a cover and an icon to give this page some character.'),
   ];
 }
 

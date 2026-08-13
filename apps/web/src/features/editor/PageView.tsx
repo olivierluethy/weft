@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { Link2 } from 'lucide-react';
 import { PAGE_WIDTH } from '@weft/shared';
 import { usePage, useInvalidate } from '@/lib/queries';
+import { PageIcon } from './pickers/IconPicker';
 import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useWorkspace } from '@/features/app/workspace';
@@ -101,6 +104,41 @@ export function PageView() {
           onSave={saveContent}
           onStats={setStats}
         />
+
+        <Backlinks pageId={pageId!} />
+      </div>
+    </div>
+  );
+}
+
+/** Pages that @mention this one. */
+function Backlinks({ pageId }: { pageId: string }) {
+  const { data } = useQuery({
+    queryKey: ['backlinks', pageId],
+    queryFn: () =>
+      api.get<{ backlinks: { id: string; title: string; icon: string | null }[] }>(
+        `/pages/${pageId}/backlinks`,
+      ),
+  });
+  const links = data?.backlinks ?? [];
+  if (links.length === 0) return null;
+
+  return (
+    <div className="mt-10 border-t border-line pt-5">
+      <p className="mb-2 flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wide text-ink-faint">
+        <Link2 size={13} /> Linked references
+      </p>
+      <div className="flex flex-col gap-0.5">
+        {links.map((l) => (
+          <Link
+            key={l.id}
+            to={`/p/${l.id}`}
+            className="flex items-center gap-2 rounded px-2 py-1.5 text-sm text-ink-muted transition hover:bg-sunk hover:text-ink"
+          >
+            {l.icon ? <PageIcon icon={l.icon} size={16} /> : '📄'}
+            {l.title || 'Untitled'}
+          </Link>
+        ))}
       </div>
     </div>
   );

@@ -32,6 +32,7 @@ import { CustomCssModal } from './CustomCssModal';
 import { CoverReposition } from './CoverReposition';
 import { coverImageStyle } from './cover';
 import { PathBar } from './PathBar';
+import { TagEditor } from './TagEditor';
 import { HistoryPanel } from '@/features/history/HistoryPanel';
 import { ShareDialog } from '@/features/share/ShareDialog';
 import { CommentsPanel } from '@/features/comments/CommentsPanel';
@@ -221,15 +222,7 @@ export function PageHeader({
             className="w-full resize-none overflow-hidden border-none bg-transparent font-display text-[40px] font-semibold leading-tight tracking-tight text-ink outline-none placeholder:text-ink-faint disabled:cursor-default"
           />
 
-          {page.tags && page.tags.length > 0 && (
-            <div className="mb-3 flex flex-wrap gap-1.5">
-              {page.tags.map((t) => (
-                <span key={t.id} className="rounded-sm bg-thread-soft px-2 py-0.5 text-xs text-thread">
-                  {t.name}
-                </span>
-              ))}
-            </div>
-          )}
+          <TagEditor page={page} editable={editable} />
         </div>
       </div>
 

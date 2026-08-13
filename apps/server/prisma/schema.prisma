@@ -162,6 +162,7 @@ model Page {
   isLocked     Boolean  @default(false)
   isFullWidth  Boolean  @default(false)
   width        Int      @default(720)
+  fontFamily   String   @default("serif") // page body/title face: serif | sans | mono
   isTemplate   Boolean  @default(false)
   deletedAt    DateTime? // trash (soft delete)
 

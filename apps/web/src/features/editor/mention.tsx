@@ -1,7 +1,8 @@
-import { BlockNoteSchema, defaultInlineContentSpecs } from '@blocknote/core';
+import { BlockNoteSchema, defaultInlineContentSpecs, defaultStyleSpecs } from '@blocknote/core';
 import { createReactInlineContentSpec } from '@blocknote/react';
 import { useNavigate } from 'react-router-dom';
 import { PageIcon } from './pickers/IconPicker';
+import { FontStyle } from './fontStyle';
 
 /** Inline chip for an @page reference. Serialises as
  * `{ type: 'mention', props: { pageId, title } }` — the shape the server's
@@ -44,10 +45,16 @@ export const Mention = createReactInlineContentSpec(
   },
 );
 
-/** Editor schema = defaults + the page-mention inline content. */
+/** Editor schema = defaults + Weft's custom specs:
+ *  - inline `mention` chip (@page reference → backlink),
+ *  - inline `font` style (per-selection font family, docs/STYLEGUIDE.md §3.4). */
 export const weftSchema = BlockNoteSchema.create({
   inlineContentSpecs: {
     ...defaultInlineContentSpecs,
     mention: Mention,
+  },
+  styleSpecs: {
+    ...defaultStyleSpecs,
+    font: FontStyle,
   },
 });

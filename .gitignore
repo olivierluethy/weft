@@ -1,0 +1,35 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build output
+dist/
+build/
+*.tsbuildinfo
+
+# env
+.env
+.env.local
+.env.*.local
+
+# database (SQLite dev file)
+*.db
+*.db-journal
+*.sqlite
+apps/server/prisma/dev.db*
+
+# local data (uploads, dev mail outbox)
+apps/server/data/
+apps/server/uploads/
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# editor / os
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+coverage/

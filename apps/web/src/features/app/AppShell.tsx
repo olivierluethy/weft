@@ -1,10 +1,13 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Route, Routes, useLocation } from 'react-router-dom';
+import { PanelLeft } from 'lucide-react';
 import { WorkspaceProvider, useWorkspace } from './workspace';
 import { Sidebar } from './Sidebar';
 import { CommandPalette } from './CommandPalette';
 import { GlobalStyles } from './GlobalStyles';
 import { useWorkspaceMeta } from '@/lib/queries';
+import { useIsMobile } from '@/hooks/useMediaQuery';
+import { cn } from '@/lib/utils';
 import { Spinner } from '@/components/ui/Spinner';
 import { PageView } from '@/features/editor/PageView';
 import { HomeView } from './HomeView';
@@ -21,6 +24,20 @@ function Shell() {
   const [sidebarWidth, setSidebarWidth] = useState(() =>
     Number(localStorage.getItem('weft-sidebar-w') || 280),
   );
+  const [collapsed, setCollapsed] = useState(
+    () => localStorage.getItem('weft-sidebar-collapsed') === '1',
+  );
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const isMobile = useIsMobile();
+  const location = useLocation();
+
+  const setCollapsedPersist = (v: boolean) => {
+    setCollapsed(v);
+    localStorage.setItem('weft-sidebar-collapsed', v ? '1' : '0');
+  };
+
+  // Close the mobile drawer whenever the route changes.
+  useEffect(() => setMobileOpen(false), [location.pathname]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -33,19 +50,51 @@ function Shell() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
+  const sidebarVisible = isMobile ? mobileOpen : !collapsed;
+
   return (
     <div className="flex h-full overflow-hidden bg-paper">
       {/* Workspace + page global CSS injected live and scoped by GlobalStyles. */}
       <GlobalStyles css={meta?.workspace.globalCss ?? null} scope="workspace" />
 
-      <Sidebar
-        width={sidebarWidth}
-        onWidthChange={(w) => {
-          setSidebarWidth(w);
-          localStorage.setItem('weft-sidebar-w', String(w));
-        }}
-        onOpenPalette={() => setPaletteOpen(true)}
-      />
+      {/* Mobile drawer backdrop */}
+      {isMobile && mobileOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-[rgba(33,31,28,.4)] md:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      <div
+        className={cn(
+          isMobile && 'fixed left-0 top-0 z-40 h-full transition-transform duration-200',
+          isMobile && (mobileOpen ? 'translate-x-0' : '-translate-x-full'),
+          !isMobile && !sidebarVisible && 'hidden',
+        )}
+      >
+        <Sidebar
+          width={isMobile ? 300 : sidebarWidth}
+          onWidthChange={(w) => {
+            setSidebarWidth(w);
+            localStorage.setItem('weft-sidebar-w', String(w));
+          }}
+          onOpenPalette={() => setPaletteOpen(true)}
+          mobile={isMobile}
+          onCollapse={() => (isMobile ? setMobileOpen(false) : setCollapsedPersist(true))}
+        />
+      </div>
+
+      {/* Floating reopen affordance when the sidebar is hidden */}
+      {!sidebarVisible && (
+        <button
+          onClick={() => (isMobile ? setMobileOpen(true) : setCollapsedPersist(false))}
+          aria-label="Open sidebar"
+          title="Open sidebar"
+          className="fixed left-2.5 top-2.5 z-30 flex h-8 w-8 items-center justify-center rounded-md border border-line bg-surface text-ink-muted shadow-sm transition hover:text-ink"
+        >
+          <PanelLeft size={17} />
+        </button>
+      )}
 
       <main className="flex-1 overflow-hidden">
         <Suspense

@@ -14,6 +14,8 @@ import {
   Monitor,
   LogOut,
   Users,
+  PanelLeftClose,
+  X,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useThemeStore } from '@/hooks/useTheme';
@@ -31,10 +33,14 @@ export function Sidebar({
   width,
   onWidthChange,
   onOpenPalette,
+  mobile = false,
+  onCollapse,
 }: {
   width: number;
   onWidthChange: (w: number) => void;
   onOpenPalette: () => void;
+  mobile?: boolean;
+  onCollapse?: () => void;
 }) {
   const { user, workspaces, logout } = useAuth();
   const { workspaceId, setWorkspaceId } = useWorkspace();
@@ -113,6 +119,16 @@ export function Sidebar({
             },
           ]}
         />
+        {onCollapse && (
+          <button
+            onClick={onCollapse}
+            aria-label={mobile ? 'Close sidebar' : 'Collapse sidebar'}
+            title={mobile ? 'Close' : 'Collapse sidebar'}
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-ink-faint transition hover:bg-surface hover:text-ink"
+          >
+            {mobile ? <X size={17} /> : <PanelLeftClose size={16} />}
+          </button>
+        )}
       </div>
 
       {/* Search + new */}
@@ -190,11 +206,13 @@ export function Sidebar({
         />
       </div>
 
-      {/* Resize handle */}
-      <div
-        onMouseDown={startResize}
-        className={`absolute -right-1 top-0 z-10 h-full w-2 cursor-col-resize ${dragging ? 'bg-thread/20' : ''}`}
-      />
+      {/* Resize handle (desktop only) */}
+      {!mobile && (
+        <div
+          onMouseDown={startResize}
+          className={`absolute -right-1 top-0 z-10 h-full w-2 cursor-col-resize ${dragging ? 'bg-thread/20' : ''}`}
+        />
+      )}
     </aside>
   );
 }

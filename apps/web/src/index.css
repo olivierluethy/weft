@@ -46,6 +46,12 @@
   --diff-del: #b23a3a;
   --diff-del-bg: #f6e1e1;
 
+  --mark-bg: #fce7a6;
+  --mark-ink: #5a4410;
+  --flash-bg: #fdebb0;
+  --scrim: rgba(255, 255, 255, 0.9);
+  --scrim-ink: #211f1c;
+
   color-scheme: light;
 }
 
@@ -74,6 +80,11 @@
     --diff-add-bg: #1c2b22;
     --diff-del: #e07a7a;
     --diff-del-bg: #2e1a1a;
+    --mark-bg: #4a3d18;
+    --mark-ink: #f0d896;
+    --flash-bg: #4a3d18;
+    --scrim: rgba(24, 23, 22, 0.82);
+    --scrim-ink: #ece9e3;
     color-scheme: dark;
   }
 }
@@ -102,6 +113,11 @@
   --diff-add-bg: #1c2b22;
   --diff-del: #e07a7a;
   --diff-del-bg: #2e1a1a;
+  --mark-bg: #4a3d18;
+  --mark-ink: #f0d896;
+  --flash-bg: #4a3d18;
+  --scrim: rgba(24, 23, 22, 0.82);
+  --scrim-ink: #ece9e3;
   color-scheme: dark;
 }
 
@@ -251,6 +267,31 @@
     opacity: 1;
     transform: none;
   }
+}
+
+/* Temporary highlight when jumping to a searched block. */
+@keyframes weft-flash {
+  0% {
+    background-color: var(--flash-bg);
+  }
+  70% {
+    background-color: var(--flash-bg);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+.weft-flash {
+  animation: weft-flash 1.6s ease-out;
+  border-radius: 4px;
+}
+
+/* Matched substring inside search snippets. */
+mark.weft-mark {
+  background: var(--mark-bg);
+  color: var(--mark-ink);
+  border-radius: 2px;
+  padding: 0 1px;
 }
 
 @media (prefers-reduced-motion: reduce) {

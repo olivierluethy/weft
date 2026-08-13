@@ -74,6 +74,24 @@ consume them, so components reference semantic tokens, never raw hex.
 | `--diff-del`    | `#B23A3A` | Removed text                 |
 | `--diff-del-bg` | `#F6E1E1` | Removed line/inline background |
 
+### 2.5a Interaction accents (search & on-image controls)
+
+| Token          | Light      | Role                                                         |
+| -------------- | ---------- | ------------------------------------------------------------ |
+| `--mark-bg`    | `#FCE7A6`  | Highlighted matched substring inside a search snippet         |
+| `--mark-ink`   | `#5A4410`  | Text colour on `--mark-bg`                                    |
+| `--flash-bg`   | `#FDEBB0`  | Temporary "jumped-to" block flash (fades out over ~1.6s)      |
+| `--scrim`      | `rgba(255,255,255,.9)` | Surface for buttons laid over cover images (backdrop-blurred) |
+| `--scrim-ink`  | `#211F1C`  | Text/icon colour on `--scrim`                                |
+
+Dark equivalents: `--mark-bg #4A3D18`, `--mark-ink #F0D896`, `--flash-bg #4A3D18`,
+`--scrim rgba(24,23,22,.82)`, `--scrim-ink #ECE9E3`.
+
+**On-image controls** — buttons placed over a cover use `--scrim` (with
+`backdrop-blur`) as their surface and `--scrim-ink` for content, so they stay legible
+against any image. Grouped in a single pill, top-right of the cover, radius `rounded`,
+`shadow-sm`, gap `4px`.
+
 ### 2.5 Dark theme
 
 Dark mode redefines the same tokens on `:root[data-theme="dark"]` and under
@@ -212,6 +230,19 @@ status colour. Auto-dismiss 4s; errors persist until dismissed.
 
 **Modals** — centred, `--surface`, `rounded-lg`, `shadow-lg`, max-width per use (420 / 560 /
 720). Backdrop `rgba(33,31,28,.36)` with slight blur. Esc + backdrop-click to close.
+
+**Path bar** — Explorer-style breadcrumb at the top of a page. Segments are `text-sm`
+`--ink-muted` chips separated by a `/` in `--ink-faint`; the last (current) segment is
+`--ink`. Hovering a segment tints it `--sunk`. A copy-path button and an inline edit mode
+(the whole bar becomes a single `.input` prefilled with `A / B / C`) sit at the end. Typing
+a path + Enter navigates; unresolved paths show an inline `--danger` "path not found" hint
+without navigating.
+
+**Search result** — row on `--surface`, hover `--sunk`, active `--thread-soft`. Line 1: page
+icon + title with the matched substring wrapped in `--mark-bg`/`--mark-ink`. Line 2: the
+containing path in `--ink-faint` `text-xs` + a copy-path action. A `--ink-faint` count badge
+("5 matches") expands to a list of occurrences, each an indented, clickable snippet that
+jumps to that block. Jumping flashes the target block with `--flash-bg`, fading over ~1.6s.
 
 ---
 

@@ -70,8 +70,12 @@ export function Editor({
   const latest = useRef<unknown>(initialContent);
 
   // Seed the shared doc from the canonical JSON the first time it opens empty.
+  // We seed on Yjs sync, but also on a short fallback timer so content always
+  // renders even if the collaboration socket is slow or unavailable.
   useEffect(() => {
+    let done = false;
     const seed = () => {
+      if (done) return;
       const fragment = doc.getXmlFragment('document');
       const meta = doc.getMap('meta');
       if (
@@ -87,11 +91,14 @@ export function Editor({
           /* content shape drift — ignore */
         }
       }
+      done = true;
       onStats?.(computeStats(editor.document));
     };
     if (provider.isSynced) seed();
     else provider.on('synced', seed);
+    const fallback = setTimeout(seed, 1500);
     return () => {
+      clearTimeout(fallback);
       provider.off('synced', seed);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

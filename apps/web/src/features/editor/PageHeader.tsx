@@ -69,6 +69,34 @@ export function PageHeader({
 }) {
   const [title, setTitle] = useState(page.title);
   const titleRef = useRef<HTMLTextAreaElement>(null);
+  const cancelRef = useRef(false);
+
+  // Keep the field in sync when the title changes elsewhere (sidebar rename,
+  // a restored version) — but never while the user is mid-edit typing here.
+  useEffect(() => {
+    if (document.activeElement !== titleRef.current) setTitle(page.title);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page.title]);
+
+  const commitTitle = () => {
+    if (cancelRef.current) {
+      cancelRef.current = false;
+      setTitle(page.title);
+      return;
+    }
+    if (title !== page.title) onUpdate({ title });
+  };
+
+  const onTitleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.currentTarget.blur(); // commit via onBlur
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      cancelRef.current = true;
+      e.currentTarget.blur(); // revert via onBlur guard
+    }
+  };
   const [showHistory, setShowHistory] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [showCss, setShowCss] = useState(false);
@@ -240,12 +268,13 @@ export function PageHeader({
             ref={titleRef}
             value={title}
             onChange={(e) => setTitle(e.target.value.replace(/\n/g, ''))}
-            onBlur={() => title !== page.title && onUpdate({ title })}
+            onKeyDown={onTitleKeyDown}
+            onBlur={commitTitle}
             disabled={!editable}
             rows={1}
             placeholder="Untitled"
             spellCheck={false}
-            className="weft-title w-full resize-none overflow-hidden border-none bg-transparent font-display text-[40px] font-semibold leading-tight tracking-tight text-ink outline-none placeholder:text-ink-faint disabled:cursor-default"
+            className="weft-title w-full cursor-text resize-none overflow-hidden border-none bg-transparent font-display text-[40px] font-semibold leading-tight tracking-tight text-ink outline-none placeholder:text-ink-faint disabled:cursor-default"
           />
 
           <TagEditor page={page} editable={editable} />

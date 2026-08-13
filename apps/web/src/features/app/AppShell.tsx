@@ -67,7 +67,8 @@ function Shell() {
 
       <div
         className={cn(
-          isMobile && 'fixed left-0 top-0 z-40 h-full transition-transform duration-200',
+          'h-full',
+          isMobile && 'fixed left-0 top-0 z-40 transition-transform duration-200',
           isMobile && (mobileOpen ? 'translate-x-0' : '-translate-x-full'),
           !isMobile && !sidebarVisible && 'hidden',
         )}

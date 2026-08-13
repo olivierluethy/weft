@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Star,
   Share2,
@@ -66,12 +66,19 @@ export function PageHeader({
   onRestored: () => void;
 }) {
   const [title, setTitle] = useState(page.title);
+  const titleRef = useRef<HTMLTextAreaElement>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [showCss, setShowCss] = useState(false);
   const [showComments, setShowComments] = useState(false);
 
   const blocks = (Array.isArray(currentContent) ? currentContent : page.content) as any[];
+
+  // A freshly created (Untitled) page opens with the title focused, ready to type.
+  useEffect(() => {
+    if (editable && !page.title) titleRef.current?.focus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page.id]);
 
   const exportItems = [
     { label: 'Markdown (.md)', onClick: () => exportMarkdown(page.title, blocks) },
@@ -212,6 +219,7 @@ export function PageHeader({
           )}
 
           <textarea
+            ref={titleRef}
             value={title}
             onChange={(e) => setTitle(e.target.value.replace(/\n/g, ''))}
             onBlur={() => title !== page.title && onUpdate({ title })}

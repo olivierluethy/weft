@@ -4,6 +4,7 @@ import { HocuspocusProvider } from '@hocuspocus/provider';
 import {
   useCreateBlockNote,
   SuggestionMenuController,
+  FormattingToolbarController,
   getDefaultReactSlashMenuItems,
   type DefaultReactSuggestionItem,
 } from '@blocknote/react';
@@ -18,6 +19,7 @@ import { useThemeStore } from '@/hooks/useTheme';
 import { useTree } from '@/lib/queries';
 import { weftSchema } from './mention';
 import { SlashMenu } from './SlashMenu';
+import { WeftFormattingToolbar } from './FormattingToolbar';
 import { extractHeadings, type OutlineHeading } from './outline';
 import { SNAPSHOT_DEBOUNCE_MS } from '@weft/shared';
 
@@ -173,6 +175,10 @@ export function Editor({
       theme={effectiveTheme(theme)}
       className="weft-page-content"
     >
+      {/* Formatting toolbar: BlockNote defaults + the per-selection font-family
+       * picker (docs/STYLEGUIDE.md §3.4). */}
+      <FormattingToolbarController formattingToolbar={WeftFormattingToolbar} />
+
       {/* Slash menu: viewport-aware (BlockNote flips it up near the bottom) and
        * internally scrollable so every block category stays reachable. */}
       <SuggestionMenuController

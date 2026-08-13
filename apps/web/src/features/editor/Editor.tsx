@@ -18,6 +18,7 @@ import { useThemeStore } from '@/hooks/useTheme';
 import { useTree } from '@/lib/queries';
 import { weftSchema } from './mention';
 import { SlashMenu } from './SlashMenu';
+import { extractHeadings, type OutlineHeading } from './outline';
 import { SNAPSHOT_DEBOUNCE_MS } from '@weft/shared';
 
 const colorFor = (id: string) => `hsl(${hashHue(id)} 55% 45%)`;
@@ -36,6 +37,7 @@ export function Editor({
   user,
   onSave,
   onStats,
+  onHeadings,
 }: {
   pageId: string;
   workspaceId: string;
@@ -44,6 +46,7 @@ export function Editor({
   user: { id: string; name: string };
   onSave: (doc: unknown) => void;
   onStats?: (stats: DocStats) => void;
+  onHeadings?: (headings: OutlineHeading[]) => void;
 }) {
   const { theme } = useThemeStore();
 
@@ -122,6 +125,7 @@ export function Editor({
       }
       done = true;
       onStats?.(computeStats(editor.document));
+      onHeadings?.(extractHeadings(editor.document));
     };
     if (provider.isSynced) seed();
     else provider.on('synced', seed);
@@ -150,6 +154,7 @@ export function Editor({
     const docJson = editor.document;
     latest.current = docJson;
     onStats?.(computeStats(docJson));
+    onHeadings?.(extractHeadings(docJson));
 
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => onSave(docJson), 800);

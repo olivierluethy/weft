@@ -11,8 +11,10 @@ import {
 import { filterSuggestionItems, insertOrUpdateBlock } from '@blocknote/core';
 import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/mantine/style.css';
-import { FileText } from 'lucide-react';
+import { FileText, Heading } from 'lucide-react';
 import './editor.css';
+// Side-effect: publishes the H1–H6 type scale as CSS custom properties.
+import { HEADING_LABELS } from './headingScale';
 import { api } from '@/lib/api';
 import { hashHue } from '@/lib/utils';
 import { computeStats, type DocStats } from './stats';
@@ -105,6 +107,25 @@ export function Editor({
   // child page (nested in the sidebar tree) and drops a link block to it here.
   const getSlashItems = async (query: string): Promise<DefaultReactSuggestionItem[]> => {
     const defaults = getDefaultReactSlashMenuItems(editor);
+
+    // BlockNote's defaults only expose Heading 1–3; surface 4–6 too (the schema
+    // now supports the full six-level scale). Slot them into the same group,
+    // right after the last built-in heading item so the ramp reads in order.
+    const headingGroup = defaults.find((d) => d.title?.startsWith('Heading'))?.group;
+    const extraHeadings: DefaultReactSuggestionItem[] = [4, 5, 6].map((level) => ({
+      title: HEADING_LABELS[level as 4 | 5 | 6],
+      subtext: `Level ${level} heading`,
+      group: headingGroup,
+      aliases: [`h${level}`, `heading${level}`],
+      icon: <Heading size={18} />,
+      onItemClick: () => insertOrUpdateBlock(editor, { type: 'heading', props: { level: level as never } }),
+    }));
+    const lastHeading = defaults.map((d) => d.title?.startsWith('Heading') ?? false).lastIndexOf(true);
+    const withHeadings =
+      lastHeading === -1
+        ? [...defaults, ...extraHeadings]
+        : [...defaults.slice(0, lastHeading + 1), ...extraHeadings, ...defaults.slice(lastHeading + 1)];
+
     const pageItem: DefaultReactSuggestionItem = {
       title: 'Page',
       subtext: 'Create a sub-page nested in this one',
@@ -127,11 +148,11 @@ export function Editor({
       },
     };
     // Keep the "Basic blocks" group contiguous by slotting Page after its last member.
-    const lastBasic = defaults.map((d) => d.group).lastIndexOf('Basic blocks');
+    const lastBasic = withHeadings.map((d) => d.group).lastIndexOf('Basic blocks');
     const merged =
       lastBasic === -1
-        ? [...defaults, pageItem]
-        : [...defaults.slice(0, lastBasic + 1), pageItem, ...defaults.slice(lastBasic + 1)];
+        ? [...withHeadings, pageItem]
+        : [...withHeadings.slice(0, lastBasic + 1), pageItem, ...withHeadings.slice(lastBasic + 1)];
     return filterSuggestionItems(merged, query);
   };
 

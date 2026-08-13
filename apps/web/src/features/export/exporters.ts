@@ -2,6 +2,8 @@
  * Kept dependency-light and self-contained so it works from persisted JSON
  * without a live editor instance. */
 
+import { headingScaleExportCss } from '../editor/headingScale';
+
 type Inline = any;
 type Block = any;
 export type PageFont = 'serif' | 'sans' | 'mono';
@@ -210,10 +212,9 @@ export function htmlDocument(title: string, blocks: Block[], font: PageFont = 's
   return `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title>
 <style>
   body{font-family:${BODY_FONT[font]};max-width:720px;margin:40px auto;padding:0 20px;color:#211f1c;line-height:1.6}
-  h1,h2,h3{font-weight:600;line-height:1.25}
-  h1{font-size:30px;letter-spacing:-.02em;margin:1.2em 0 .4em}
-  h2{font-size:24px;letter-spacing:-.01em;margin:1.1em 0 .35em}
-  h3{font-size:19px;letter-spacing:-.01em;margin:1em 0 .3em}
+  /* Heading scale mirrors the live editor — single source of truth in
+     features/editor/headingScale.ts, so editor and export never diverge. */
+  ${headingScaleExportCss()}
   code{font-family:'JetBrains Mono',monospace;background:#f4f2ee;padding:2px 5px;border-radius:4px;font-size:.9em}
   pre{background:#f4f2ee;padding:14px;border-radius:8px;overflow:auto}
   blockquote{border-left:3px solid #2e4374;margin:0;padding-left:16px;color:#6b6660}
@@ -236,8 +237,15 @@ export function exportPdf(title: string, blocks: Block[], font: PageFont = 'seri
 /** DOCX export via the `docx` library (dynamic import to keep it out of the main bundle). */
 export async function exportDocx(title: string, blocks: Block[], font: PageFont = 'serif') {
   const { Document, Packer, Paragraph, HeadingLevel, TextRun } = await import('docx');
-  const headingFor = (lvl: number) =>
-    lvl === 1 ? HeadingLevel.HEADING_1 : lvl === 2 ? HeadingLevel.HEADING_2 : HeadingLevel.HEADING_3;
+  const HEADING_FOR = [
+    HeadingLevel.HEADING_1,
+    HeadingLevel.HEADING_2,
+    HeadingLevel.HEADING_3,
+    HeadingLevel.HEADING_4,
+    HeadingLevel.HEADING_5,
+    HeadingLevel.HEADING_6,
+  ];
+  const headingFor = (lvl: number) => HEADING_FOR[Math.min(Math.max(lvl, 1), 6) - 1];
 
   const paras: any[] = [new Paragraph({ text: title || 'Untitled', heading: HeadingLevel.TITLE })];
   const walk = (list: Block[], level = 0) => {

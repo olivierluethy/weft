@@ -8,6 +8,7 @@ import { createReactInlineContentSpec } from '@blocknote/react';
 import { useNavigate } from 'react-router-dom';
 import { PageIcon } from './pickers/IconPicker';
 import { FontStyle } from './fontStyle';
+import { Heading6 } from './heading';
 import { PageLink } from './pageLink';
 
 /** Inline chip for an @page reference. Serialises as
@@ -52,12 +53,15 @@ export const Mention = createReactInlineContentSpec(
 );
 
 /** Editor schema = defaults + Weft's custom specs:
+ *  - `heading` block widened to six levels (docs/STYLEGUIDE.md §3.2) — overrides
+ *    BlockNote's default, which caps `level` at 1–3,
  *  - `pageLink` block (sub-page reference, docs/STYLEGUIDE.md §6),
  *  - inline `mention` chip (@page reference → backlink),
  *  - inline `font` style (per-selection font family, docs/STYLEGUIDE.md §3.4). */
 export const weftSchema = BlockNoteSchema.create({
   blockSpecs: {
     ...defaultBlockSpecs,
+    heading: Heading6,
     pageLink: PageLink,
   },
   inlineContentSpecs: {

@@ -55,6 +55,8 @@ export function PageHeader({
   editable,
   stats,
   currentContent,
+  historyOpen,
+  onHistoryOpenChange,
   onUpdate,
   onRestored,
 }: {
@@ -64,6 +66,8 @@ export function PageHeader({
   editable: boolean;
   stats: DocStats;
   currentContent: unknown;
+  historyOpen: boolean;
+  onHistoryOpenChange: (open: boolean) => void;
   onUpdate: (partial: Record<string, unknown>) => void;
   onRestored: () => void;
 }) {
@@ -97,7 +101,6 @@ export function PageHeader({
       e.currentTarget.blur(); // revert via onBlur guard
     }
   };
-  const [showHistory, setShowHistory] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [showCss, setShowCss] = useState(false);
   const [showComments, setShowComments] = useState(false);
@@ -168,7 +171,7 @@ export function PageHeader({
           <IconButton label="Share" onClick={() => setShowShare(true)}>
             <Share2 size={16} />
           </IconButton>
-          <IconButton label="Version history" onClick={() => setShowHistory(true)}>
+          <IconButton label="Version history" active={historyOpen} onClick={() => onHistoryOpenChange(true)}>
             <History size={16} />
           </IconButton>
 
@@ -281,14 +284,14 @@ export function PageHeader({
         </div>
       </div>
 
-      {showHistory && (
+      {historyOpen && (
         <HistoryPanel
           pageId={page.id}
           title={page.title}
           currentContent={currentContent}
           editable={editable}
           onRestored={onRestored}
-          onClose={() => setShowHistory(false)}
+          onClose={() => onHistoryOpenChange(false)}
         />
       )}
       {showShare && <ShareDialog pageId={page.id} onClose={() => setShowShare(false)} />}

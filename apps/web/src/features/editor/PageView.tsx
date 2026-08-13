@@ -26,11 +26,18 @@ export function PageView() {
   const invalidate = useInvalidate();
   const [stats, setStats] = useState<DocStats>(() => computeStats([]));
   const [headings, setHeadings] = useState<OutlineHeading[]>([]);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const contentRef = useRef<unknown>(null);
 
   const page = data?.page;
   const role = data?.role ?? 'viewer';
   const editable = role !== 'viewer' && !(page?.isLocked ?? false);
+
+  // Close the history panel when switching pages so its read-only guard never
+  // leaks onto the next page's editor.
+  useEffect(() => {
+    setHistoryOpen(false);
+  }, [pageId]);
 
   useEffect(() => {
     if (page) setStats(computeStats(page.content));
@@ -104,6 +111,8 @@ export function PageView() {
         editable={editable}
         stats={stats}
         currentContent={contentRef.current ?? page.content}
+        historyOpen={historyOpen}
+        onHistoryOpenChange={setHistoryOpen}
         onUpdate={update}
         onRestored={() => void refetch()}
       />
@@ -114,7 +123,7 @@ export function PageView() {
           pageId={pageId!}
           workspaceId={page.workspaceId}
           initialContent={page.content}
-          editable={editable}
+          editable={editable && !historyOpen}
           user={{ id: user.id, name: user.name }}
           onSave={saveContent}
           onStats={setStats}

@@ -37,12 +37,21 @@
   border-color: transparent !important;
 }
 
-.weft-page-content .bn-block-content,
-.weft-page-content .bn-inline-content {
+/* Size/style at the BLOCK level only; the inline text must inherit it. The text
+ * actually lives in `.bn-inline-content`, a child of `.bn-block-content` — so
+ * setting an explicit `font-size`/`font-family` on the inline element (as this
+ * rule used to) pinned every heading's text to the body size/face regardless of
+ * the level set on its parent. That was the real "all headings look the same"
+ * bug. Keep the block as the single sizing surface and let inline content follow. */
+.weft-page-content .bn-block-content {
   font-family: var(--wf-body-font);
   font-size: var(--body-size);
   line-height: var(--body-lh);
   color: var(--ink);
+}
+.weft-page-content .bn-inline-content {
+  font: inherit;
+  color: inherit;
 }
 
 .weft-page-content .bn-block-content[data-content-type='heading'] {

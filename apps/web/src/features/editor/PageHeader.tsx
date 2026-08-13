@@ -17,6 +17,8 @@ import {
   ChevronRight,
   Wallpaper,
   MessageSquare,
+  Move,
+  Trash2,
 } from 'lucide-react';
 import { PAGE_WIDTH } from '@weft/shared';
 import type { PageDetail, Breadcrumb } from '@/lib/queries';
@@ -29,6 +31,8 @@ import { IconPicker, PageIcon } from './pickers/IconPicker';
 import { CoverPicker } from './pickers/CoverPicker';
 import { StatsPanel } from './StatsPanel';
 import { CustomCssModal } from './CustomCssModal';
+import { CoverReposition } from './CoverReposition';
+import { coverImageStyle } from './cover';
 import { HistoryPanel } from '@/features/history/HistoryPanel';
 import { ShareDialog } from '@/features/share/ShareDialog';
 import { CommentsPanel } from '@/features/comments/CommentsPanel';
@@ -204,7 +208,13 @@ export function PageHeader({
             </Popover>
           ) : (
             editable && (
-              <Popover trigger={<button className="mb-2 flex items-center gap-1.5 rounded px-2 py-1 text-sm text-ink-faint opacity-0 transition hover:bg-sunk hover:text-ink group-hover:opacity-100 [.pageheader:hover_&]:opacity-100"><Smile size={15} /> Add icon</button>}>
+              <Popover
+                trigger={
+                  <button className="mb-2 inline-flex items-center gap-1.5 rounded border border-line-strong bg-surface px-2.5 py-1 text-sm font-medium text-ink-muted transition hover:border-thread hover:text-thread">
+                    <Smile size={15} /> Add icon
+                  </button>
+                }
+              >
                 {(close) => (
                   <IconPicker
                     workspaceId={page.workspaceId}
@@ -282,53 +292,59 @@ function CoverArea({
   editable: boolean;
   onUpdate: (partial: Record<string, unknown>) => void;
 }) {
+  const [reposition, setReposition] = useState(false);
+
   if (!page.coverUrl) {
+    if (!editable) return null;
     return (
-      <div className="group relative">
-        {editable && (
-          <div className="mx-auto flex px-12" style={{ maxWidth: (page.width || 720) + 96 }}>
-            <Popover
-              trigger={
-                <button
-                  id="weft-cover-trigger"
-                  className="mt-3 flex items-center gap-1.5 rounded px-2 py-1 text-sm text-ink-faint opacity-0 transition hover:bg-sunk hover:text-ink group-hover:opacity-100"
-                >
-                  <ImagePlus size={15} /> Add cover
-                </button>
-              }
+      <div className="mx-auto flex px-12 pt-3" style={{ maxWidth: (page.width || 720) + 96 }}>
+        <Popover
+          trigger={
+            <button
+              id="weft-cover-trigger"
+              className="inline-flex items-center gap-1.5 rounded border border-line-strong bg-surface px-2.5 py-1 text-sm font-medium text-ink-muted transition hover:border-thread hover:text-thread"
             >
-              {(close) => (
-                <CoverPicker
-                  workspaceId={page.workspaceId}
-                  onPick={(url) => {
-                    onUpdate({ coverUrl: url });
-                    close();
-                  }}
-                  onRemove={close}
-                />
-              )}
-            </Popover>
-          </div>
-        )}
+              <ImagePlus size={15} /> Add cover
+            </button>
+          }
+        >
+          {(close) => (
+            <CoverPicker
+              workspaceId={page.workspaceId}
+              onPick={(url) => {
+                onUpdate({ coverUrl: url });
+                close();
+              }}
+              onRemove={close}
+            />
+          )}
+        </Popover>
       </div>
     );
   }
 
   return (
-    <div className="group relative w-full" style={{ height: COVER_HEIGHT }}>
+    <div className="group relative w-full overflow-hidden" style={{ height: COVER_HEIGHT }}>
       <img
         src={page.coverUrl}
         alt="Cover"
-        className="h-full w-full object-cover"
-        style={{ objectPosition: `center ${page.coverOffsetY ?? 50}%` }}
+        draggable={false}
+        style={coverImageStyle(page.coverOffsetX, page.coverOffsetY, page.coverScale)}
       />
       {editable && (
-        <div className="absolute bottom-3 right-3 opacity-0 transition group-hover:opacity-100">
+        <div
+          className="absolute right-3 top-3 flex items-center gap-1 rounded p-1 opacity-0 shadow-sm backdrop-blur transition group-hover:opacity-100"
+          style={{ background: 'var(--scrim)' }}
+        >
           <Popover
             align="end"
             trigger={
-              <button id="weft-cover-trigger" className="rounded bg-surface/90 px-2.5 py-1 text-xs font-medium text-ink shadow-sm backdrop-blur hover:bg-surface">
-                Change cover
+              <button
+                id="weft-cover-trigger"
+                className="flex items-center gap-1.5 rounded px-2 py-1 text-xs font-medium transition hover:bg-black/5"
+                style={{ color: 'var(--scrim-ink)' }}
+              >
+                <ImagePlus size={13} /> Change
               </button>
             }
           >
@@ -346,7 +362,37 @@ function CoverArea({
               />
             )}
           </Popover>
+          <span className="h-4 w-px" style={{ background: 'var(--line)' }} />
+          <button
+            onClick={() => setReposition(true)}
+            className="flex items-center gap-1.5 rounded px-2 py-1 text-xs font-medium transition hover:bg-black/5"
+            style={{ color: 'var(--scrim-ink)' }}
+          >
+            <Move size={13} /> Reposition
+          </button>
+          <span className="h-4 w-px" style={{ background: 'var(--line)' }} />
+          <button
+            onClick={() => onUpdate({ coverUrl: null })}
+            className="flex items-center gap-1.5 rounded px-2 py-1 text-xs font-medium transition hover:bg-black/5"
+            style={{ color: 'var(--scrim-ink)' }}
+          >
+            <Trash2 size={13} /> Remove
+          </button>
         </div>
+      )}
+
+      {reposition && (
+        <CoverReposition
+          url={page.coverUrl}
+          offsetX={page.coverOffsetX ?? 50}
+          offsetY={page.coverOffsetY ?? 50}
+          scale={page.coverScale ?? 1}
+          onSave={(v) => {
+            onUpdate(v);
+            setReposition(false);
+          }}
+          onCancel={() => setReposition(false)}
+        />
       )}
     </div>
   );

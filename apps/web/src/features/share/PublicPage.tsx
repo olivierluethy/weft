@@ -5,6 +5,7 @@ import { Logo } from '@/components/Logo';
 import { Spinner } from '@/components/ui/Spinner';
 import { toHtml } from '@/features/export/exporters';
 import { PageIcon } from '@/features/editor/pickers/IconPicker';
+import { coverImageStyle } from '@/features/editor/cover';
 
 interface PublicData {
   permission: string;
@@ -13,6 +14,9 @@ interface PublicData {
     title: string;
     icon: string | null;
     coverUrl: string | null;
+    coverOffsetX?: number;
+    coverOffsetY?: number;
+    coverScale?: number;
     content: unknown;
     customCss: string | null;
     workspaceName: string;
@@ -83,7 +87,17 @@ export default function PublicPage() {
       </header>
 
       {active.coverUrl && (
-        <img src={active.coverUrl} alt="" className="h-[220px] w-full object-cover" />
+        <div className="h-[220px] w-full overflow-hidden">
+          <img
+            src={active.coverUrl}
+            alt=""
+            style={coverImageStyle(
+              active.coverOffsetX ?? 50,
+              active.coverOffsetY ?? 50,
+              active.coverScale ?? 1,
+            )}
+          />
+        </div>
       )}
 
       <article className="weft-page-content mx-auto max-w-[720px] px-6 py-10">

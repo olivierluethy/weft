@@ -12,6 +12,31 @@
   font-family: Newsreader, Georgia, serif;
 }
 
+/* The editor content must sit flat like Notion — no container border and no
+ * focus box around the whole editing region. The global :focus-visible ring
+ * would otherwise wrap the contenteditable; suppress it here (block-level hover
+ * controls — the + and drag handle — are separate elements and stay). */
+.weft-page-content,
+.weft-page-content .bn-editor,
+.weft-page-content .bn-container,
+.weft-page-content .ProseMirror {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+.weft-page-content .bn-editor:focus,
+.weft-page-content .bn-editor:focus-visible,
+.weft-page-content .bn-container:focus,
+.weft-page-content .bn-container:focus-visible,
+.weft-page-content [contenteditable]:focus,
+.weft-page-content [contenteditable]:focus-visible,
+.weft-page-content .ProseMirror:focus,
+.weft-page-content .ProseMirror:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+}
+
 .weft-page-content .bn-block-content,
 .weft-page-content .bn-inline-content {
   font-family: Newsreader, Georgia, serif;

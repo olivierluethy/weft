@@ -204,7 +204,7 @@ export function PageTree({ nodes, filter }: { nodes: PageTreeNode[]; filter?: (n
           {item.isLocked && <Lock size={11} className="shrink-0 text-ink-faint" />}
           {item.isFavorite && <Star size={11} className="shrink-0 fill-madder text-madder" />}
 
-          <div className="flex shrink-0 items-center opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+          <div className="flex h-full shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
             <PageRowMenu
               pageId={item.id}
               title={item.title}
@@ -213,7 +213,7 @@ export function PageTree({ nodes, filter }: { nodes: PageTreeNode[]; filter?: (n
             >
               <span
                 aria-label={`More actions for ${item.title || 'Untitled'}`}
-                className="flex h-5 w-5 items-center justify-center rounded text-ink-faint hover:bg-line/60 hover:text-ink"
+                className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-ink-faint hover:bg-line/60 hover:text-ink"
               >
                 <MoreHorizontal size={14} />
               </span>
@@ -223,7 +223,7 @@ export function PageTree({ nodes, filter }: { nodes: PageTreeNode[]; filter?: (n
                 e.stopPropagation();
                 void createChild(item.id);
               }}
-              className="flex h-5 w-5 items-center justify-center rounded text-ink-faint hover:bg-line/60 hover:text-ink"
+              className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-ink-faint hover:bg-line/60 hover:text-ink"
               aria-label={`Add a page inside ${item.title || 'Untitled'}`}
               title="Add a page inside"
             >

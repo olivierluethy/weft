@@ -216,8 +216,10 @@ export interface ActivityFeed {
   events: ActivityEvent[];
   /** Overall activity span, so the client can build year/month navigation. */
   range: { earliest: string; latest: string } | null;
-  /** The window these events cover (month is null for a whole-year view). */
-  window: { year: number; month: number | null };
+  /** The window these events cover. `year`/`month` describe the calendar
+   * selection (month is null for a whole-year view; both null for a custom
+   * range); `from`/`to` are the resolved ISO half-open bounds `[from, to)`. */
+  window: { year: number | null; month: number | null; from: string; to: string };
   /** True when the window held more events than the returned cap. */
   truncated: boolean;
 }

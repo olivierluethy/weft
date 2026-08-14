@@ -127,7 +127,7 @@ export default async function workspaceRoutes(app: FastifyInstance) {
   app.get('/:id/activity', async (req) => {
     const { id } = req.params as { id: string };
     await requireMembership(id, req.currentUser!.id);
-    const q = req.query as { year?: string; month?: string };
+    const q = req.query as { year?: string; month?: string; from?: string; to?: string };
 
     // Lightweight page metadata (no content) for titles/icons + creation events.
     const pages = await prisma.page.findMany({
@@ -144,16 +144,35 @@ export default async function workspaceRoutes(app: FastifyInstance) {
       ? { earliest: earliest.toISOString(), latest: now.toISOString() }
       : null;
 
-    // Resolve the requested window. No params → current month.
-    const year = q.year ? parseInt(q.year, 10) : now.getUTCFullYear();
-    const monthParam = q.month != null && q.month !== '' ? parseInt(q.month, 10) : null;
-    // A whole-year view is requested when a year is given without a month;
-    // otherwise default to the current month.
-    const month = monthParam ?? (q.year ? null : now.getUTCMonth() + 1);
-    const start = month
-      ? new Date(Date.UTC(year, month - 1, 1))
-      : new Date(Date.UTC(year, 0, 1));
-    const end = month ? new Date(Date.UTC(year, month, 1)) : new Date(Date.UTC(year + 1, 0, 1));
+    // Resolve the requested window. An explicit `from`/`to` range (used by the
+    // Activity navigator's date presets, which can straddle month boundaries)
+    // wins; otherwise fall back to the calendar year/month selection, and with
+    // no params at all default to the current month.
+    const fromParam = q.from ? new Date(q.from) : null;
+    const toParam = q.to ? new Date(q.to) : null;
+    const hasRange =
+      fromParam && toParam && !isNaN(fromParam.getTime()) && !isNaN(toParam.getTime());
+
+    let year: number | null;
+    let month: number | null;
+    let start: Date;
+    let end: Date;
+    if (hasRange) {
+      year = null;
+      month = null;
+      start = fromParam!;
+      end = toParam!;
+    } else {
+      year = q.year ? parseInt(q.year, 10) : now.getUTCFullYear();
+      const monthParam = q.month != null && q.month !== '' ? parseInt(q.month, 10) : null;
+      // A whole-year view is requested when a year is given without a month;
+      // otherwise default to the current month.
+      month = monthParam ?? (q.year ? null : now.getUTCMonth() + 1);
+      start = month
+        ? new Date(Date.UTC(year, month - 1, 1))
+        : new Date(Date.UTC(year, 0, 1));
+      end = month ? new Date(Date.UTC(year, month, 1)) : new Date(Date.UTC(year + 1, 0, 1));
+    }
 
     // All version snapshots for this workspace's live pages, lightweight (no
     // content), ordered so each version's predecessor is the row before it —
@@ -223,7 +242,7 @@ export default async function workspaceRoutes(app: FastifyInstance) {
     const feed: ActivityFeed = {
       events: truncated ? events.slice(0, ACTIVITY_CAP) : events,
       range,
-      window: { year, month },
+      window: { year, month, from: start.toISOString(), to: end.toISOString() },
       truncated,
     };
     return feed;

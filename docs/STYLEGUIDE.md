@@ -422,6 +422,44 @@ containing path in `--ink-faint` `text-xs` + a copy-path action. A `--ink-faint`
 ("5 matches") expands to a list of occurrences, each an indented, clickable snippet that
 jumps to that block. Jumping flashes the target block with `--flash-bg`, fading over ~1.6s.
 
+### 6.2 Activity navigator & density chart
+
+The Activity Log (`features/history/ActivityView.tsx`) is a **two-pane time
+navigator**, not a flat list. Desktop = a `w-72` left rail (`--surface/40`,
+`border-r --line`, own scroll) + a scrolling feed; the rail collapses on mobile
+where the feed's sticky bar carries a compact quick-range menu.
+
+- **Navigator (rail):** year tabs (active = `--thread` solid), a month grid with
+  a ‹ › period stepper (active month = `--thread-soft`), and quick date presets
+  (Today … This year, incl. month-straddling ranges) via a menu.
+- **Density chart** = horizontal bars, one cell per day (month view) or per month
+  (year view). Bar length ∝ the count of **real** change events in the cell —
+  never synthetic UI events (§19 of the brief). Filled bar `--thread/55`
+  (`--thread` when it's the current-context cell), empty track `--line/50`. Bars
+  double as the day/month scrubber: click a day → smooth-scroll to its section,
+  click a month → drill in. Granularity adapts to the window span.
+- **Sticky context bar** (feed top, `--paper/90` + `backdrop-blur`) shows
+  `Year / Month / Day`, updated from the top-most visible day group on scroll.
+- **Filters** stay in sync with the chart: type chips (Created/Edited/Restored —
+  only classes backed by durable data) + a searchable per-page popover.
+- **Entry actions** (hover): Open page, Open in new tab (`/p/:id`), Copy path
+  (workspace-rooted, built from the page tree) with a "Path copied" toast.
+
+The Workspace Overview (`HomeView`) mirrors the fast-answer intent with one-click
+quick-filter chips (Edited today/this week, Created this month/this year) — it
+does **not** duplicate the navigator.
+
+### 6.3 Marquee multi-select
+
+Rubber-band block selection (`features/editor/MarqueeSelect.tsx`) anchors in
+**document coordinates** (`client + scroll`), so scrolling mid-drag never strands
+the anchor or makes the selection jump. Edge auto-scroll: a rAF loop scrolls the
+page container when the pointer sits within 72px of the top/bottom, at a speed
+proportional to how deep it is in the hot-zone; newly revealed blocks fold into
+the selection each tick. Highlights are portalled `fixed` overlays (`--thread`
+tints) — never classes on BlockNote's own DOM. On release, a floating bar
+(Duplicate / Delete / clear) anchors under the selection.
+
 ---
 
 ## 7. Interactive states

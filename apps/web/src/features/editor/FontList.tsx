@@ -40,6 +40,7 @@ export function FontList({
     const matches = fuzzyFilter<PageFontDef>(PAGE_FONTS, query, (f) => [
       f.label,
       f.group,
+      f.desc,
       ...(f.keywords ?? []),
     ]);
     // Grouping is dropped while searching: a relevance-ordered list is the
@@ -114,10 +115,7 @@ export function FontList({
                     >
                       {font.label}
                     </span>
-                    <span className="truncate text-2xs text-ink-faint">
-                      {font.group}
-                      {font.keywords?.[1] ? ` · ${font.keywords[1]}` : ''}
-                    </span>
+                    <span className="truncate text-2xs text-ink-faint">{font.desc}</span>
                   </span>
                   {isActive && <Check size={16} className="shrink-0 text-thread" />}
                 </button>

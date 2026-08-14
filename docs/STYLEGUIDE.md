@@ -688,9 +688,9 @@ mixing a real PDF logo with a generic `FileText` would read as six different ico
 languages. Instead one drawn primitive — a document sheet with a folded corner, same
 1.5px stroke, same 16/18/20 sizes — carries a short format wordmark (`MD`, `TXT`, `JSON`,
 `DOC`, `PDF`, `HTML`) and a per-format accent tint, so `PDF` is identifiable at a glance
-while the six stay obviously one family. Accents: MD `--ink-muted`, TXT `--ink-faint`,
+while the six stay obviously one family. Accents: MD `#8a5cc4`, TXT `--ink-muted`,
 JSON `#c9a227`, DOC `#3f76c4`, PDF `#c4554d`, HTML `#cc772f` — the same swatch vocabulary
-as the block colour palette.
+as the block colour palette, with plain text left deliberately neutral.
 
 ---
 

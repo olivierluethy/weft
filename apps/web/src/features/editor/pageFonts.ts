@@ -28,6 +28,8 @@ export interface PageFontDef {
   key: PageFontKey;
   /** Shown in the picker. */
   label: string;
+  /** One-line character sketch under the name in the picker. */
+  desc: string;
   group: PageFontGroup;
   /** CSS font stack, with a generic fallback so text renders while loading. */
   stack: string;
@@ -41,6 +43,7 @@ export const PAGE_FONTS = [
   // ── Serif ────────────────────────────────────────────────────────────────
   {
     key: 'serif',
+    desc: 'Editorial, classic',
     label: 'Newsreader',
     group: 'Serif',
     stack: 'Newsreader, Georgia, serif',
@@ -49,6 +52,7 @@ export const PAGE_FONTS = [
   },
   {
     key: 'lora',
+    desc: 'Contemporary, brushed',
     label: 'Lora',
     group: 'Serif',
     stack: "Lora, Georgia, serif",
@@ -57,6 +61,7 @@ export const PAGE_FONTS = [
   },
   {
     key: 'merriweather',
+    desc: 'Sturdy, built for screens',
     label: 'Merriweather',
     group: 'Serif',
     stack: "Merriweather, Georgia, serif",
@@ -65,6 +70,7 @@ export const PAGE_FONTS = [
   },
   {
     key: 'source-serif',
+    desc: 'Quiet workhorse text',
     label: 'Source Serif 4',
     group: 'Serif',
     stack: "'Source Serif 4', Georgia, serif",
@@ -73,6 +79,7 @@ export const PAGE_FONTS = [
   },
   {
     key: 'playfair',
+    desc: 'High contrast, dramatic',
     label: 'Playfair Display',
     group: 'Serif',
     stack: "'Playfair Display', Georgia, serif",
@@ -81,6 +88,7 @@ export const PAGE_FONTS = [
   },
   {
     key: 'baskerville',
+    desc: 'Bookish, transitional',
     label: 'Libre Baskerville',
     group: 'Serif',
     stack: "'Libre Baskerville', Georgia, serif",
@@ -89,6 +97,7 @@ export const PAGE_FONTS = [
   },
   {
     key: 'garamond',
+    desc: 'Old style, humanist',
     label: 'EB Garamond',
     group: 'Serif',
     stack: "'EB Garamond', Garamond, Georgia, serif",
@@ -99,6 +108,7 @@ export const PAGE_FONTS = [
   // ── Sans ─────────────────────────────────────────────────────────────────
   {
     key: 'sans',
+    desc: 'Clean, modern UI',
     label: 'Inter',
     group: 'Sans',
     stack: 'Inter, system-ui, sans-serif',
@@ -107,6 +117,7 @@ export const PAGE_FONTS = [
   },
   {
     key: 'roboto',
+    desc: 'Neutral, familiar',
     label: 'Roboto',
     group: 'Sans',
     stack: 'Roboto, system-ui, sans-serif',
@@ -115,6 +126,7 @@ export const PAGE_FONTS = [
   },
   {
     key: 'open-sans',
+    desc: 'Humanist, very readable',
     label: 'Open Sans',
     group: 'Sans',
     stack: "'Open Sans', system-ui, sans-serif",
@@ -123,6 +135,7 @@ export const PAGE_FONTS = [
   },
   {
     key: 'lato',
+    desc: 'Warm, humanist',
     label: 'Lato',
     group: 'Sans',
     stack: 'Lato, system-ui, sans-serif',
@@ -131,6 +144,7 @@ export const PAGE_FONTS = [
   },
   {
     key: 'montserrat',
+    desc: 'Geometric, headline',
     label: 'Montserrat',
     group: 'Sans',
     stack: 'Montserrat, system-ui, sans-serif',
@@ -139,6 +153,7 @@ export const PAGE_FONTS = [
   },
   {
     key: 'poppins',
+    desc: 'Geometric, round',
     label: 'Poppins',
     group: 'Sans',
     stack: 'Poppins, system-ui, sans-serif',
@@ -147,6 +162,7 @@ export const PAGE_FONTS = [
   },
   {
     key: 'nunito',
+    desc: 'Rounded, friendly',
     label: 'Nunito',
     group: 'Sans',
     stack: 'Nunito, system-ui, sans-serif',
@@ -155,6 +171,7 @@ export const PAGE_FONTS = [
   },
   {
     key: 'source-sans',
+    desc: 'Level, understated',
     label: 'Source Sans 3',
     group: 'Sans',
     stack: "'Source Sans 3', system-ui, sans-serif",
@@ -163,6 +180,7 @@ export const PAGE_FONTS = [
   },
   {
     key: 'work-sans',
+    desc: 'Grotesque, screen-first',
     label: 'Work Sans',
     group: 'Sans',
     stack: "'Work Sans', system-ui, sans-serif",
@@ -171,6 +189,7 @@ export const PAGE_FONTS = [
   },
   {
     key: 'grotesk',
+    desc: 'Technical display — Weft\'s own',
     label: 'Space Grotesk',
     group: 'Sans',
     stack: "'Space Grotesk', system-ui, sans-serif",
@@ -181,6 +200,7 @@ export const PAGE_FONTS = [
   // ── Mono ─────────────────────────────────────────────────────────────────
   {
     key: 'mono',
+    desc: 'Fixed width, for code',
     label: 'JetBrains Mono',
     group: 'Mono',
     stack: "'JetBrains Mono', ui-monospace, monospace",
@@ -189,6 +209,7 @@ export const PAGE_FONTS = [
   },
   {
     key: 'fira-code',
+    desc: 'Code, with ligatures',
     label: 'Fira Code',
     group: 'Mono',
     stack: "'Fira Code', ui-monospace, monospace",
@@ -197,6 +218,7 @@ export const PAGE_FONTS = [
   },
   {
     key: 'source-code',
+    desc: 'Code, even colour',
     label: 'Source Code Pro',
     group: 'Mono',
     stack: "'Source Code Pro', ui-monospace, monospace",
@@ -205,6 +227,7 @@ export const PAGE_FONTS = [
   },
   {
     key: 'plex-mono',
+    desc: 'Code, engineered',
     label: 'IBM Plex Mono',
     group: 'Mono',
     stack: "'IBM Plex Mono', ui-monospace, monospace",

@@ -22,8 +22,8 @@ interface FormatSpec {
 }
 
 const FORMATS: Record<FileFormat, FormatSpec> = {
-  md: { mark: 'MD', accent: 'var(--ink-muted)' },
-  txt: { mark: 'TXT', accent: 'var(--ink-faint)' },
+  md: { mark: 'MD', accent: '#8a5cc4' },
+  txt: { mark: 'TXT', accent: 'var(--ink-muted)' },
   json: { mark: 'JSON', accent: '#c9a227' },
   docx: { mark: 'DOC', accent: '#3f76c4' },
   pdf: { mark: 'PDF', accent: '#c4554d' },

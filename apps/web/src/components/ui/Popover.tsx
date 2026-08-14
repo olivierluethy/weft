@@ -25,13 +25,24 @@ export function Popover({
   children,
   align = 'start',
   className,
+  onOpenChange,
 }: {
   trigger: ReactElement;
   children: ReactNode | ((close: () => void) => ReactNode);
   align?: Align;
   className?: string;
+  /** Notified whenever the panel opens/closes (e.g. to freeze a parent menu). */
+  onOpenChange?: (open: boolean) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const firstRun = useRef(true);
+  useEffect(() => {
+    if (firstRun.current) {
+      firstRun.current = false;
+      return;
+    }
+    onOpenChange?.(open);
+  }, [open, onOpenChange]);
   const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
   const triggerRef = useRef<HTMLSpanElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);

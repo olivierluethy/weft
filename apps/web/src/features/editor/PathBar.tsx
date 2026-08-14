@@ -48,9 +48,17 @@ export function PathBar({
     if (next && next !== (current?.title ?? '')) onRenameCurrent?.(next);
     setTitleEdit(null);
   };
+  // Select-all ONCE when rename mode opens — depend on the boolean, not on
+  // `titleEdit` itself. Keying it on `titleEdit` re-ran `.select()` on every
+  // keystroke, so each new character replaced the whole (re-selected) value and
+  // typing could never get past one character.
+  const isRenaming = titleEdit !== null;
   useEffect(() => {
-    if (titleEdit !== null) titleRef.current?.select();
-  }, [titleEdit]);
+    if (isRenaming) {
+      titleRef.current?.focus();
+      titleRef.current?.select();
+    }
+  }, [isRenaming]);
 
   const pathString = breadcrumbs.map((c) => c.title || 'Untitled').join(' / ');
 
@@ -139,7 +147,7 @@ export function PathBar({
   }
 
   return (
-    <div className="group flex min-w-0 flex-1 items-center gap-1 text-sm text-ink-muted">
+    <div className="flex min-w-0 flex-1 items-center gap-1 text-sm text-ink-muted">
       <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
         {breadcrumbs.map((c, i) => {
           const isLast = i === breadcrumbs.length - 1;
@@ -195,14 +203,21 @@ export function PathBar({
           );
         })}
       </nav>
-      <div className="flex shrink-0 items-center opacity-0 transition group-hover:opacity-100">
-        <button onClick={copy} title="Copy path" className="rounded p-1 text-ink-faint hover:bg-sunk hover:text-ink">
+      {/* Copy / Edit path — permanently visible (previously opacity-0 until hover). */}
+      <div className="flex shrink-0 items-center gap-0.5">
+        <button
+          onClick={copy}
+          title="Copy path"
+          aria-label="Copy path"
+          className="rounded-md p-1 text-ink-faint transition-colors hover:bg-sunk hover:text-ink"
+        >
           <Copy size={13} />
         </button>
         <button
           onClick={() => setEditing(true)}
           title="Edit path"
-          className="rounded p-1 text-ink-faint hover:bg-sunk hover:text-ink"
+          aria-label="Edit path"
+          className="rounded-md p-1 text-ink-faint transition-colors hover:bg-sunk hover:text-ink"
         >
           <Pencil size={13} />
         </button>

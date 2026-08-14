@@ -60,7 +60,14 @@ function Shell() {
   const sidebarVisible = isMobile ? mobileOpen : !collapsed;
 
   return (
-    <div className="flex h-full overflow-hidden bg-paper">
+    <div
+      className={cn(
+        'flex h-full overflow-hidden bg-paper',
+        // Desktop-only: sidebar removed from flow → reserve header space for the
+        // floating reopen button (see .wf-sidebar-collapsed in index.css).
+        !isMobile && !sidebarVisible && 'wf-sidebar-collapsed',
+      )}
+    >
       {/* Workspace + page global CSS injected live and scoped by GlobalStyles. */}
       <GlobalStyles css={meta?.workspace.globalCss ?? null} scope="workspace" />
 

@@ -273,7 +273,9 @@ export function PageTree({
                 e.stopPropagation();
                 setRenaming({ id: item.id, value: item.title });
               }}
-              title="Double-click to rename"
+              // Full name on hover so long, truncated titles stay legible;
+              // rename stays discoverable via double-click and the row's ⋯ menu.
+              title={item.title || 'Untitled'}
             >
               {item.title || 'Untitled'}
             </span>

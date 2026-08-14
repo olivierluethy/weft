@@ -213,7 +213,7 @@ export function PageHeader({
           own colour. Everything transitions so the change reads as a smooth lift. */}
       <div
         className={cn(
-          'sticky top-0 z-20 flex items-center gap-1 py-2 pl-12 pr-3 backdrop-blur md:px-4',
+          'wf-page-header-bar sticky top-0 z-20 flex items-center gap-1 py-2 pl-12 pr-3 backdrop-blur md:px-4',
           'transition-[background-color,box-shadow,border-color] duration-200 ease-out',
           scrolled
             ? 'border-b border-line shadow-[0_4px_14px_-10px_rgba(33,31,28,0.35)] [&_button:not(.bg-thread-soft)]:text-ink'

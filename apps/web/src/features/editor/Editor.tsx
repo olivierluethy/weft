@@ -13,6 +13,7 @@ import { multiColumnDropCursor, locales as multiColumnLocales } from '@blocknote
 import { createMultilineBlocksPlugin, multilineBlocksPluginKey } from './multilineBlocks';
 import { createEmptyBlockDeletePlugin, emptyBlockDeletePluginKey } from './emptyBlockDelete';
 import { createQuoteShortcutPlugin, quoteShortcutPluginKey } from './quoteShortcut';
+import { installEmptyDocRedoFallback } from './emptyDocRedo';
 import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/mantine/style.css';
 import './editor.css';
@@ -170,6 +171,14 @@ export function Editor({
       }
     };
   }, [editor]);
+
+  // Restore content when redo follows an undo that emptied the whole document —
+  // a y-prosemirror collab-undo limitation the native redo can't recover. See
+  // emptyDocRedo.ts. Editable panes only.
+  useEffect(() => {
+    if (!editable) return;
+    return installEmptyDocRedoFallback(editor);
+  }, [editor, editable]);
 
   // Reliable hover-state hide for the block side menu (＋ / ⠿). BlockNote's plugin
   // keeps the floating handles pinned to the last block after the pointer moves

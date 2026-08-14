@@ -83,6 +83,12 @@ export function CodeLanguagePicker({ editor }: { editor: any }) {
     (lang: Lang | undefined) => {
       if (!lang || !state) return;
       try {
+        // Reflect the choice on the native pill immediately. BlockNote's code
+        // block NodeView.update() does not re-sync its <select> when the
+        // language attr changes programmatically, so without this the pill would
+        // keep showing the old language (e.g. "JavaScript") until a reload, even
+        // though the model + Shiki highlighting have already switched.
+        state.select.value = lang.value;
         editor.updateBlock(state.blockId, { props: { language: lang.value } });
       } catch {
         /* block was removed while the popover was open */
@@ -122,8 +128,14 @@ export function CodeLanguagePicker({ editor }: { editor: any }) {
     };
   }, [state, compute]);
 
+  // Focus the search box once the panel is actually on screen. The panel renders
+  // `visibility:hidden` until its coordinates are computed, and a hidden element
+  // can't take focus — so focusing synchronously on open silently fails and the
+  // user's keystrokes leak into the code block. Focus after paint, when visible.
   useEffect(() => {
-    if (state) inputRef.current?.focus();
+    if (!state) return;
+    const id = requestAnimationFrame(() => inputRef.current?.focus());
+    return () => cancelAnimationFrame(id);
   }, [state]);
 
   // Outside click + Escape close. Clicks on a code-block select are owned by the

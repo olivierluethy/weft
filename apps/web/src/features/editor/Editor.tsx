@@ -31,6 +31,7 @@ import { useTree, useInvalidate } from '@/lib/queries';
 import { weftSchema } from './mention';
 import { SlashMenu } from './SlashMenu';
 import { MarqueeSelect } from './MarqueeSelect';
+import { CodeLanguagePicker } from './CodeLanguagePicker';
 import { WeftFormattingToolbar } from './FormattingToolbar';
 import { extractHeadings, type OutlineHeading } from './outline';
 
@@ -362,6 +363,7 @@ export function Editor({
   return (
     <>
     {editable && <MarqueeSelect editor={editor} />}
+    {editable && <CodeLanguagePicker editor={editor} />}
     <BlockNoteView
       editor={editor}
       editable={editable}

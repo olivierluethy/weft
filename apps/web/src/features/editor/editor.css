@@ -147,6 +147,7 @@
 }
 .weft-page-content .bn-block-content[data-content-type='codeBlock'] > div > select {
   opacity: 1;
+  cursor: pointer;
   transition: background-color 0.12s ease, color 0.12s ease;
   transition-delay: 0s;
   top: 8px;

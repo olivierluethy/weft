@@ -12,6 +12,9 @@ import { Spinner } from '@/components/ui/Spinner';
 import { PageView } from '@/features/editor/PageView';
 import { HomeView } from './HomeView';
 
+const SidePeek = lazy(() =>
+  import('@/features/editor/SidePeek').then((m) => ({ default: m.SidePeek })),
+);
 const SettingsView = lazy(() => import('@/features/settings/SettingsView'));
 const GraphView = lazy(() => import('@/features/graph/GraphView'));
 const TrashView = lazy(() => import('@/features/app/TrashView'));
@@ -28,6 +31,7 @@ function Shell() {
     () => localStorage.getItem('weft-sidebar-collapsed') === '1',
   );
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [peekId, setPeekId] = useState<string | null>(null);
   const isMobile = useIsMobile();
   const location = useLocation();
 
@@ -36,8 +40,11 @@ function Shell() {
     localStorage.setItem('weft-sidebar-collapsed', v ? '1' : '0');
   };
 
-  // Close the mobile drawer whenever the route changes.
-  useEffect(() => setMobileOpen(false), [location.pathname]);
+  // Close the mobile drawer + any side peek whenever the route changes.
+  useEffect(() => {
+    setMobileOpen(false);
+    setPeekId(null);
+  }, [location.pathname]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -80,6 +87,7 @@ function Shell() {
             localStorage.setItem('weft-sidebar-w', String(w));
           }}
           onOpenPalette={() => setPaletteOpen(true)}
+          onOpenPeek={setPeekId}
           mobile={isMobile}
           onCollapse={() => (isMobile ? setMobileOpen(false) : setCollapsedPersist(true))}
         />
@@ -119,6 +127,12 @@ function Shell() {
       </main>
 
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+
+      {peekId && (
+        <Suspense fallback={null}>
+          <SidePeek pageId={peekId} onClose={() => setPeekId(null)} />
+        </Suspense>
+      )}
     </div>
   );
 }

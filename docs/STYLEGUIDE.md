@@ -380,6 +380,14 @@ status colour. Auto-dismiss 4s; errors persist until dismissed.
 **Modals** — centred, `--surface`, `rounded-lg`, `shadow-lg`, max-width per use (420 / 560 /
 720). Backdrop `rgba(33,31,28,.36)` with slight blur. Esc + backdrop-click to close.
 
+**Side peek** — a right-docked panel (`z-peek`) that previews another page without leaving
+the current one. `--paper` background, `1px --line` left border, `shadow-lg`, slides in
+(`slidein .2s`). ~46vw on desktop (clamped 440–760px), full-width on mobile with a tap-scrim.
+**Non-modal on desktop** — the main view stays visible and scrollable; it closes on Esc, the
+✕, or (mobile) the scrim. Content is rendered **read-only** via the same static `toHtml`
+renderer the public share view uses, so a peek never opens a second collaborative editor
+session. Header offers "Open as full page" and "Open in new tab".
+
 **Path bar** — Explorer-style breadcrumb at the top of a page. Segments are `text-sm`
 `--ink-muted` chips separated by a `/` in `--ink-faint`; the last (current) segment is
 `--ink`. Hovering a segment tints it `--sunk`. A copy-path button and an inline edit mode

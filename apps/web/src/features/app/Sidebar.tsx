@@ -37,12 +37,14 @@ export function Sidebar({
   width,
   onWidthChange,
   onOpenPalette,
+  onOpenPeek,
   mobile = false,
   onCollapse,
 }: {
   width: number;
   onWidthChange: (w: number) => void;
   onOpenPalette: () => void;
+  onOpenPeek?: (pageId: string) => void;
   mobile?: boolean;
   onCollapse?: () => void;
 }) {
@@ -195,7 +197,7 @@ export function Sidebar({
           </div>
         )}
 
-        <PagesSection nodes={tree ?? []} />
+        <PagesSection nodes={tree ?? []} onOpenPeek={onOpenPeek} />
       </div>
 
       {/* Footer nav */}

@@ -187,6 +187,9 @@ type BlockSpec =
   | { kind: 'file'; type: string }
   // A sub-page reference (`pageLink`) backed by a real child page row.
   | { kind: 'page' }
+  // A multi-column layout: inserts BlockNote's `columnList` with `count` real
+  // `column` containers, each holding an empty paragraph (drag blocks in/out).
+  | { kind: 'columns'; count: number }
   // An action (not a block type): mentions, emoji, date, imports. Runs `run`
   // and inserts inline content / blocks itself. Never matches an existing block.
   | { kind: 'action'; run: (ctx: BlockTypeCtx) => void | Promise<void> };
@@ -281,10 +284,10 @@ const EXTRA_DEFS: BlockTypeDef[] = [
   mk('toggle_h1', 'Toggle heading 1', 'Collapsible heading 1', 'Advanced', Heading1, { kind: 'simple', type: 'toggle', props: { open: true, level: 1 } }, ['toggle heading', 'h1']),
   mk('toggle_h2', 'Toggle heading 2', 'Collapsible heading 2', 'Advanced', Heading2, { kind: 'simple', type: 'toggle', props: { open: true, level: 2 } }, ['toggle heading', 'h2']),
   mk('toggle_h3', 'Toggle heading 3', 'Collapsible heading 3', 'Advanced', Heading3, { kind: 'simple', type: 'toggle', props: { open: true, level: 3 } }, ['toggle heading', 'h3']),
-  mk('columns_2', '2 columns', 'Two-column layout', 'Advanced', Columns2, { kind: 'simple', type: 'columns', props: { count: 2 } }, ['columns', '2 columns']),
-  mk('columns_3', '3 columns', 'Three-column layout', 'Advanced', Columns3, { kind: 'simple', type: 'columns', props: { count: 3 } }, ['columns', '3 columns']),
-  mk('columns_4', '4 columns', 'Four-column layout', 'Advanced', Columns4, { kind: 'simple', type: 'columns', props: { count: 4 } }, ['columns', '4 columns']),
-  mk('columns_5', '5 columns', 'Five-column layout', 'Advanced', Columns4, { kind: 'simple', type: 'columns', props: { count: 5 } }, ['columns', '5 columns']),
+  mk('columns_2', '2 columns', 'Two-column layout', 'Advanced', Columns2, { kind: 'columns', count: 2 }, ['columns', '2 columns']),
+  mk('columns_3', '3 columns', 'Three-column layout', 'Advanced', Columns3, { kind: 'columns', count: 3 }, ['columns', '3 columns']),
+  mk('columns_4', '4 columns', 'Four-column layout', 'Advanced', Columns4, { kind: 'columns', count: 4 }, ['columns', '4 columns']),
+  mk('columns_5', '5 columns', 'Five-column layout', 'Advanced', Columns4, { kind: 'columns', count: 5 }, ['columns', '5 columns']),
   mk('smart_notes', 'Smart Notes', 'An AI-notes container', 'Advanced', Sparkles, { kind: 'simple', type: 'smartNotes' }, ['smart notes', 'ai']),
   mk('mermaid', 'Code - Mermaid', 'Mermaid diagram source', 'Advanced', Workflow, { kind: 'simple', type: 'mermaid' }, ['mermaid', 'diagram', 'graph']),
   // ── Inline ────────────────────────────────────────────────────────────────
@@ -439,6 +442,8 @@ export function matchesBlock(def: BlockTypeDef, block: AnyBlock): boolean {
       return false;
     case 'page':
       return block.type === 'pageLink';
+    case 'columns':
+      return block.type === 'columnList';
     case 'file':
       return block.type === def.spec.type;
     case 'simple': {
@@ -616,6 +621,49 @@ export async function insertBlockType(def: BlockTypeDef, ctx: BlockTypeCtx): Pro
       }
       return;
     }
+    case 'columns': {
+      insertColumns(editor, def.spec.count);
+      return;
+    }
+  }
+}
+
+/**
+ * Insert a real BlockNote `columnList` of `count` empty columns and drop the caret
+ * into the first column, so the user can type immediately. Each column starts with
+ * one empty paragraph (a `column` cannot be empty). Replaces the current block when
+ * it's an empty paragraph (the usual slash case), otherwise inserts after it.
+ */
+function insertColumns(editor: AnyEditor, count: number): void {
+  const n = Math.max(2, Math.min(5, count));
+  const columnList = {
+    type: 'columnList',
+    children: Array.from({ length: n }, () => ({
+      type: 'column',
+      children: [{ type: 'paragraph' }],
+    })),
+  };
+  const cur = editor.getTextCursorPosition().block;
+  const curEmpty =
+    cur?.type === 'paragraph' &&
+    blockPlainText(cur) === '' &&
+    (!cur.children || cur.children.length === 0);
+
+  let insertedList: AnyBlock | undefined;
+  if (curEmpty) {
+    insertedList = editor.replaceBlocks([cur], [columnList as never]).insertedBlocks?.[0];
+  } else {
+    insertedList = editor.insertBlocks([columnList as never], cur, 'after')?.[0];
+  }
+
+  // Land the caret in the first column's paragraph so typing starts there.
+  const firstPara = insertedList?.children?.[0]?.children?.[0];
+  if (firstPara?.id) {
+    try {
+      editor.setTextCursorPosition(firstPara.id, 'start');
+    } catch {
+      /* structure moved under us — leave the caret where it is */
+    }
   }
 }
 
@@ -665,6 +713,26 @@ export async function convertBlockType(
         props: { pageId: id, workspaceId: ctx.workspaceId, title: '', icon: '' },
       } as never);
       await ctx.invalidateTree();
+      return;
+    }
+    case 'columns': {
+      // "Turn into columns": wrap the current block's text into the first column,
+      // the rest empty, so no content is silently lost.
+      const n = Math.max(2, Math.min(5, def.spec.count));
+      const text = (seedText ?? blockPlainText(block)).trim();
+      const first = {
+        type: 'column',
+        children: [
+          text
+            ? { type: 'paragraph', content: [{ type: 'text', text, styles: {} }] }
+            : { type: 'paragraph' },
+        ],
+      };
+      const rest = Array.from({ length: n - 1 }, () => ({
+        type: 'column',
+        children: [{ type: 'paragraph' }],
+      }));
+      editor.replaceBlocks([block], [{ type: 'columnList', children: [first, ...rest] } as never]);
       return;
     }
   }

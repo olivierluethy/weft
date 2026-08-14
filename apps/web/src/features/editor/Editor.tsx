@@ -8,7 +8,8 @@ import {
   SideMenuController,
   type DefaultReactSuggestionItem,
 } from '@blocknote/react';
-import { filterSuggestionItems } from '@blocknote/core';
+import { filterSuggestionItems, locales as coreLocales } from '@blocknote/core';
+import { multiColumnDropCursor, locales as multiColumnLocales } from '@blocknote/xl-multi-column';
 import { createMultilineBlocksPlugin, multilineBlocksPluginKey } from './multilineBlocks';
 import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/mantine/style.css';
@@ -113,6 +114,14 @@ export function Editor({
 
   const editor = useCreateBlockNote({
     schema: weftSchema,
+    // Multi-column drop cursor: shows a vertical insert bar so blocks can be dropped
+    // into / between columns. Paired with `withMultiColumn(weftSchema)` (mention.tsx).
+    dropCursor: multiColumnDropCursor,
+    dictionary: {
+      ...coreLocales.en,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      multi_column: multiColumnLocales.en as any,
+    },
     collaboration: {
       provider,
       fragment: doc.getXmlFragment('document'),

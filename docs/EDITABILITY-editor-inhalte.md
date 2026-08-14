@@ -12,7 +12,7 @@ DOM-Vorhandensein — dieselbe Disziplin wie in [`POSTMORTEM-inline-caret-und-te
 | Punkt | Thema | Status |
 |---|---|---|
 | 1 | Highlight/Quote mehrzeilig (Enter/Doppel-Enter) | ✅ **fertig & verifiziert** |
-| 2–5 | Columns als echte Block-Container (Drag&Drop) | 🔎 analysiert — Feature-Build nötig |
+| 2–5 | Columns als echte Block-Container (Drag&Drop) | ✅ **fertig & verifiziert** |
 | 6–10 | Database vollständig editierbar (Rows/Properties/Zellen) | 🔎 analysiert — Feature-Build nötig |
 | 11–12 | Gallery-Cards editierbar | 🔎 analysiert — Feature-Build nötig |
 | 13 | Charts auf editierbaren Daten | 🔎 analysiert — Feature-Build nötig |
@@ -92,24 +92,49 @@ Fall B des Auftrags.
 
 ---
 
-## Punkt 2–5 — Columns als echte Container 🔎 (analysiert, Feature-Build)
+## Punkt 2–5 — Columns als echte Container ✅
 
-**Aktuelles Verhalten / reproduzierter Befund:** Der `columns`-Block
-(`blocks/dataBlocks.tsx`) ist `content: 'none'` und `contentEditable={false}` — ein reines
-optisches Gitter aus gestrichelten „Column 1..N"-Kästen. Er kann **keine** Blöcke
-aufnehmen; Drag&Drop in Columns existiert nicht. Kommentar im Code: *„Baseline: scaffold;
-block-nesting into columns pending."*
+### 1) Aktuelles Verhalten (vorher)
+Der `columns`-Block (`blocks/dataBlocks.tsx`) war `content:'none'` + `contentEditable={false}`
+— ein reines Gitter aus gestrichelten „Column 1..N"-Kästen. **Keine** Blöcke aufnehmbar,
+kein Drag&Drop. Code-Kommentar: *„Baseline: scaffold; block-nesting pending."*
 
-**Technische Ursache:** Custom-`createReactBlockSpec`-Blöcke können in dieser BlockNote-
-Version keine Block-Kinder halten, und dieser Block ist ohnehin `content:'none'`.
+### 2) Reproduzierter Fehler
+Per CDP das Modell gelesen: `/2 columns` erzeugte einen `columns`-Block ohne Kinder;
+Tippen/Slash im „Kasten" unmöglich (contentEditable=false).
 
-**Plan (empfohlen):** BlockNotes **offizielles** Multi-Column-Paket
-`@blocknote/xl-multi-column@0.25.1` (versionsgleich zu unserem BlockNote 0.25.1) integrieren
-— es bringt echte `columnList`/`column`-Blöcke mit nativem Nesting, Drag&Drop und
-Drop-Cursor. Schritte: Paket installieren → `withMultiColumn(weftSchema)` + `dropCursor` →
-den Scaffold-`columns`-Block ersetzen/migrieren → Slash-/„+"-Registry anpassen → Kollaboration
-(Yjs-Schema) prüfen → Block-Kompatibilität (welche Blöcke in Columns sinnvoll sind)
-festlegen. Danach per CDP/echtem Drag verifizieren. **Umfang:** eigenständiges Feature.
+### 3) Technische Ursache
+Custom-`createReactBlockSpec`-Blöcke halten in dieser BlockNote-Version keine Block-Kinder,
+und der Block war `content:'none'`.
+
+### 4) Vorgenommene Änderung
+BlockNotes **offizielles** `@blocknote/xl-multi-column@0.25.1` (versionsgleich) integriert:
+- `withMultiColumn(weftSchema)` (mention.tsx) → echte `columnList`/`column`-Blöcke.
+- `dropCursor: multiColumnDropCursor` + Multi-Column-Dictionary (Editor.tsx) → sichtbarer
+  Einfüge-Cursor beim Ziehen zwischen/in Spalten.
+- Slash-Registry (blockTypes.tsx): neuer `BlockSpec`-`kind: 'columns'`; `insertColumns()`
+  fügt einen echten `columnList` mit N Spalten (je leerer Absatz) ein und setzt den Caret in
+  Spalte 1. „Turn into" wickelt den Blocktext in Spalte 1. Der alte Scaffold-Block bleibt im
+  Schema (Rückwärtskompatibilität), wird aber nicht mehr angeboten.
+- Fehlende Paket-Typen via ambienter Deklaration (`src/blocknote-xl-multi-column.d.ts`);
+  `prosemirror-state` als direkte Dependency (gleiche Instanz wie BlockNote).
+
+### 5) Test (CDP, echte Interaktion, Modell gelesen)
+```text
+/2 columns → columnList{ column[paragraph], column[paragraph] }   ← echte Container
+Caret in Spalte 1 → "InCol1" landet in Spalte 1
+Enter in Spalte → zweiter Absatz IN derselben Spalte (col1=[A1,A2])
+"/" in Spalte → Slash-Menü öffnet mit allen Blocktypen
+Drag (echte DragEvents) Top-Level-Block → Spalte 2: Modell zeigt Block jetzt IN Spalte 2
+Drag Block aus Spalte → Top-Level: Modell zeigt Block wieder außerhalb, Spalte leer
+```
+(Die exakte Einfügetiefe beim synthetischen Drop hängt von den Koordinaten ab; echte
+Maus-Nutzer platzieren präzise über den sichtbaren Drop-Cursor.)
+
+### 6) Ergebnis
+Columns sind echte Notion-artige Container: Blöcke reinschreiben, mehrere Blöcke pro Spalte,
+Slash-Commands, und Blöcke per Drag&Drop rein/raus/zwischen Spalten bewegen. Block-Kompatibilität
+regelt BlockNote nativ (verhindert z. B. columnList-in-column). Persistenz über Yjs.
 
 ## Punkt 6–10 — Database editierbar 🔎 (analysiert, Feature-Build)
 

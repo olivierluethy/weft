@@ -1,12 +1,15 @@
 import { createReactBlockSpec } from '@blocknote/react';
 import { ChevronRight, RefreshCw, Sparkles, Home } from 'lucide-react';
 
-/** Horizontal divider. */
+/** Horizontal divider. `w-full` is required: BlockNote's `.bn-block-content` is a
+ * `display:flex` row, so without an explicit width the wrapper collapses to the
+ * `<hr>`'s zero intrinsic width and the rule renders 0px wide (invisible). This
+ * mirrors BlockNote's own `pageBreak` block, which sets `width:100%` on its child. */
 export const Divider = createReactBlockSpec(
   { type: 'divider', propSchema: {}, content: 'none' },
   {
     render: () => (
-      <div className="py-2" contentEditable={false}>
+      <div className="w-full py-2" contentEditable={false}>
         <hr className="border-0 border-t border-line-strong" />
       </div>
     ),

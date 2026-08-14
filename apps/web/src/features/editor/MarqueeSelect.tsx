@@ -163,11 +163,16 @@ export function MarqueeSelect({ editor }: { editor: AnyEditor }) {
     const onDown = (e: MouseEvent) => {
       if (e.button !== 0) return;
       const t = e.target as HTMLElement;
+      // Clicks on the floating bar are portalled to <body> (outside `container`),
+      // so they never reach this handler — the selection survives while its
+      // actions are used. Any click on in-editor text / controls is a fresh
+      // interaction and clears the prior marquee selection.
       if (
         t.closest(
-          '.bn-inline-content, .bn-side-menu, .bn-button, [data-weft-plus], [data-marquee-bar], a, button, input, textarea, select',
+          '.bn-inline-content, .bn-side-menu, .bn-button, [data-weft-plus], a, button, input, textarea, select',
         )
       ) {
+        clearSelection();
         return;
       }
       clearSelection(); // a fresh interaction drops any prior marquee selection

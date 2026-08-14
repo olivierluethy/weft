@@ -27,6 +27,7 @@ import { WeftSideMenu, PageConvertDialog } from './WeftSideMenu';
 import {
   getSlashBlockItems,
   convertBlockType,
+  addBlockAfter,
   blockPlainText,
   type BlockTypeDef,
   type BlockTypeCtx,
@@ -88,6 +89,8 @@ export function Editor({
   onHeadings,
   reorderRef,
   focusEditorRef,
+  importRef,
+  pageUpdatedAt,
 }: {
   pageId: string;
   workspaceId: string;
@@ -101,6 +104,11 @@ export function Editor({
   /** Set by the editor to focus the body's first block (used by the title's
    * Enter key so it jumps straight into the content). */
   focusEditorRef?: MutableRefObject<(() => void) | null>;
+  /** Set by the editor to a function that appends imported blocks to the doc,
+   * so the page-menu Import dialog can push parsed content into the editor. */
+  importRef?: MutableRefObject<((blocks: unknown[]) => void) | null>;
+  /** Page's last-edited timestamp, surfaced in the block-action menu footer. */
+  pageUpdatedAt?: string;
 }) {
   const { theme } = useThemeStore();
   const navigate = useNavigate();
@@ -543,10 +551,61 @@ export function Editor({
     };
   }, [editor, focusEditorRef]);
 
+  // Expose an "append imported blocks" function so the page-menu Import dialog can
+  // push parsed content into the live document. Appends after the last block, or
+  // replaces the doc when it's just one empty paragraph, then focuses the first
+  // imported block. Editable panes only.
+  useEffect(() => {
+    if (!importRef) return;
+    importRef.current = (blocks: unknown[]) => {
+      if (!Array.isArray(blocks) || blocks.length === 0) return;
+      try {
+        const doc = editor.document as any[];
+        const last = doc[doc.length - 1];
+        const onlyEmpty = isBlocksEmpty(doc);
+        const inserted = onlyEmpty
+          ? editor.replaceBlocks(doc.map((b) => b.id), blocks as never).insertedBlocks
+          : editor.insertBlocks(blocks as never, last, 'after');
+        const first = inserted?.[0];
+        if (first?.id) {
+          try {
+            editor.setTextCursorPosition(first.id, 'start');
+          } catch {
+            /* first imported block isn't a text block — no caret to place */
+          }
+        }
+      } catch {
+        /* content shape drift — the import dialog surfaces its own error toast */
+      }
+    };
+    return () => {
+      if (importRef) importRef.current = null;
+    };
+  }, [editor, importRef]);
+
+  // The "+" add-block verb: insert a brand-new block after the clicked one
+  // (never converts it). Distinct from `handleBlockConvert` above (§17–19).
+  const handleAddBlock = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (block: any, def: BlockTypeDef) => {
+      void addBlockAfter(def, block, blockCtx);
+    },
+    [blockCtx],
+  );
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const renderSideMenu = useCallback(
-    (menuProps: any) => <WeftSideMenu {...menuProps} onConvert={handleBlockConvert} />,
-    [handleBlockConvert],
+    (menuProps: any) => (
+      <WeftSideMenu
+        {...menuProps}
+        onConvert={handleBlockConvert}
+        onAddBlock={handleAddBlock}
+        ctx={blockCtx}
+        tree={tree ?? []}
+        pageUpdatedAt={pageUpdatedAt}
+      />
+    ),
+    [handleBlockConvert, handleAddBlock, blockCtx, tree, pageUpdatedAt],
   );
 
   return (

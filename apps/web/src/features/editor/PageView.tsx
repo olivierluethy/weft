@@ -30,6 +30,7 @@ export function PageView() {
   const contentRef = useRef<unknown>(null);
   const reorderRef = useRef<ReorderSection | null>(null);
   const focusEditorRef = useRef<(() => void) | null>(null);
+  const importRef = useRef<((blocks: unknown[]) => void) | null>(null);
 
   const page = data?.page;
   const role = data?.role ?? 'viewer';
@@ -135,6 +136,8 @@ export function PageView() {
           onHeadings={setHeadings}
           reorderRef={reorderRef}
           focusEditorRef={focusEditorRef}
+          importRef={importRef}
+          pageUpdatedAt={page.updatedAt}
         />
 
         <Backlinks pageId={pageId!} />

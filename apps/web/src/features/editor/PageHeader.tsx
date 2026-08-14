@@ -13,6 +13,7 @@ import {
   Maximize2,
   Minimize2,
   Download,
+  Upload,
   Wallpaper,
   MessageSquare,
   Move,
@@ -59,6 +60,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { useInvalidate } from '@/lib/queries';
 import { MovePageDialog } from './MovePageDialog';
+import { ImportDialog } from './ImportDialog';
 
 /** Shared style for the horizontal page-header meta actions (Add cover / Add
  * icon / Add tag). Kept in sync with `META_PILL` in TagEditor.tsx (§13-14). */
@@ -78,6 +80,7 @@ export function PageHeader({
   onUpdate,
   onRestored,
   onTitleEnter,
+  onImportFile,
 }: {
   page: PageDetail;
   breadcrumbs: Breadcrumb[];
@@ -93,6 +96,9 @@ export function PageHeader({
   onRestored: () => void;
   /** Enter in the title jumps the caret into the editor body (Notion-style). */
   onTitleEnter?: () => void;
+  /** Parse + append an uploaded file to the page (wired to the editor). Absent
+   * when the page isn't editable — the Import entry hides in that case. */
+  onImportFile?: (file: File) => Promise<number>;
 }) {
   const [title, setTitle] = useState(page.title);
   const titleRef = useRef<HTMLTextAreaElement>(null);
@@ -151,6 +157,7 @@ export function PageHeader({
   const [showCss, setShowCss] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   // Path-edit mode is owned here (not inside PathBar) so the "Edit path" control
   // can live in the persistent header cluster and open it at any scroll depth.
   const [pathEditing, setPathEditing] = useState(false);
@@ -406,7 +413,17 @@ export function PageHeader({
               { label: 'Move to', icon: <FolderInput size={15} />, onClick: () => setMoveOpen(true), disabled: !editable },
               { label: 'Move to trash', icon: <Trash2 size={15} />, onClick: () => void trashPage(), danger: true, disabled: role === 'viewer' },
               { divider: true, label: '' },
-              ...exportItems.map((e) => ({ label: e.label, icon: <Download size={15} />, onClick: e.onClick })),
+              {
+                label: 'Import…',
+                icon: <Upload size={15} />,
+                onClick: () => setImportOpen(true),
+                disabled: !editable || !onImportFile,
+              },
+              ...exportItems.map((e) => ({
+                label: `Export · ${e.label}`,
+                icon: <Download size={15} />,
+                onClick: e.onClick,
+              })),
             ]}
           />
           </Tooltip>
@@ -544,6 +561,13 @@ export function PageHeader({
       )}
       {moveOpen && (
         <MovePageDialog pageId={page.id} workspaceId={page.workspaceId} onClose={() => setMoveOpen(false)} />
+      )}
+      {onImportFile && (
+        <ImportDialog
+          open={importOpen}
+          onClose={() => setImportOpen(false)}
+          onImport={onImportFile}
+        />
       )}
     </>
   );

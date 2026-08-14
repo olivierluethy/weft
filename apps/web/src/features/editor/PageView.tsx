@@ -30,6 +30,7 @@ export function PageView() {
   const contentRef = useRef<unknown>(null);
   const reorderRef = useRef<ReorderSection | null>(null);
   const focusEditorRef = useRef<(() => void) | null>(null);
+  const importRef = useRef<((file: File) => Promise<number>) | null>(null);
 
   const page = data?.page;
   const role = data?.role ?? 'viewer';
@@ -120,6 +121,14 @@ export function PageView() {
         onUpdate={update}
         onRestored={() => void refetch()}
         onTitleEnter={() => focusEditorRef.current?.()}
+        onImportFile={
+          editable
+            ? (file) =>
+                importRef.current
+                  ? importRef.current(file)
+                  : Promise.reject(new Error('The editor is still loading.'))
+            : undefined
+        }
       />
 
       <div className="mx-auto px-4 pb-40 sm:px-8 md:px-12" style={{ maxWidth, width: '100%' }}>
@@ -135,6 +144,8 @@ export function PageView() {
           onHeadings={setHeadings}
           reorderRef={reorderRef}
           focusEditorRef={focusEditorRef}
+          importRef={importRef}
+          pageUpdatedAt={page.updatedAt}
         />
 
         <Backlinks pageId={pageId!} />

@@ -66,6 +66,7 @@ import { format } from 'date-fns';
 import { api } from '@/lib/api';
 import { HEADING_LABELS, HEADING_LEVELS } from './headingScale';
 import { weftCustomBlockSpecs } from './blocks';
+import { recordBlockUse } from '@/lib/blockUsage';
 
 /**
  * Land the caret inside a just-inserted custom-inline block so the first keystroke
@@ -512,8 +513,10 @@ function pickFile(accept: string): Promise<File | null> {
   });
 }
 
-/** Minimal RFC-4180-ish CSV parser (handles quoted fields + escaped quotes). */
-function parseCsv(text: string): string[][] {
+/** Minimal RFC-4180-ish CSV parser (handles quoted fields + escaped quotes).
+ * Exported so the page-level Import (features/export/importContent.ts) reuses the
+ * same parser as the slash-menu "Import CSV" action — one CSV implementation. */
+export function parseCsv(text: string): string[][] {
   const rows: string[][] = [];
   let row: string[] = [];
   let field = '';
@@ -582,6 +585,10 @@ async function importAsFile(ctx: BlockTypeCtx, accept: string, label: string) {
  */
 export async function insertBlockType(def: BlockTypeDef, ctx: BlockTypeCtx): Promise<void> {
   const { editor } = ctx;
+  // A real block creation — feed the "Recommended" row in the Add-block menu.
+  // Counted here (not on hover/open, and not on "turn into") so the row reflects
+  // what the user actually builds. See lib/blockUsage.ts.
+  recordBlockUse(def.key);
   switch (def.spec.kind) {
     case 'action': {
       await def.spec.run(ctx);
@@ -623,6 +630,102 @@ export async function insertBlockType(def: BlockTypeDef, ctx: BlockTypeCtx): Pro
     }
     case 'columns': {
       insertColumns(editor, def.spec.count);
+      return;
+    }
+  }
+}
+
+/**
+ * "+" add-block verb: insert a brand-new block *after* the anchor `block` (the
+ * one whose side handle was clicked), and land the caret in it. This is the
+ * semantic the "+" should have — add something new below — as opposed to the
+ * six-dots "Turn into", which rewrites the anchor in place (§17–19 of the brief).
+ * Unlike the slash menu it never converts the current block, so clicking "+" on a
+ * filled block always keeps that block and adds a sibling under it.
+ */
+export async function addBlockAfter(
+  def: BlockTypeDef,
+  block: AnyBlock,
+  ctx: BlockTypeCtx,
+): Promise<void> {
+  const { editor } = ctx;
+  recordBlockUse(def.key);
+  switch (def.spec.kind) {
+    case 'action': {
+      // Actions insert inline content / their own blocks at the caret; anchor the
+      // caret to the end of the clicked block first so they land in the right place.
+      try {
+        editor.setTextCursorPosition(block.id, 'end');
+      } catch {
+        /* anchor block isn't a text block — the action falls back to the cursor */
+      }
+      await def.spec.run(ctx);
+      return;
+    }
+    case 'simple': {
+      const inserted = editor.insertBlocks(
+        [
+          {
+            type: def.spec.type,
+            ...(def.spec.props ? { props: def.spec.props } : {}),
+            ...(def.spec.content ? { content: def.spec.content } : {}),
+          } as never,
+        ],
+        block,
+        'after',
+      )[0];
+      if (!inserted) return;
+      const content = editor.schema.blockSchema[def.spec.type]?.content;
+      if (content === 'inline') {
+        try {
+          editor.setTextCursorPosition(inserted.id, 'end');
+        } catch {
+          /* ignore — caret stays put */
+        }
+        // Custom React inline blocks mount their editable a frame late; re-assert
+        // the DOM caret so the first keystroke types inline (see the note above).
+        if (def.spec.type in weftCustomBlockSpecs) focusInsertedInlineBlock(editor, inserted.id);
+      }
+      return;
+    }
+    case 'file': {
+      const inserted = editor.insertBlocks([{ type: def.spec.type } as never], block, 'after')[0];
+      if (inserted) openFilePanel(editor, editor.getBlock(inserted.id) ?? inserted);
+      return;
+    }
+    case 'page': {
+      const id = await createChildPage(ctx, '');
+      editor.insertBlocks(
+        [
+          {
+            type: 'pageLink',
+            props: { pageId: id, workspaceId: ctx.workspaceId, title: '', icon: '' },
+          } as never,
+        ],
+        block,
+        'after',
+      );
+      await ctx.invalidateTree();
+      return;
+    }
+    case 'columns': {
+      const n = Math.max(2, Math.min(5, def.spec.count));
+      const columnList = {
+        type: 'columnList',
+        children: Array.from({ length: n }, () => ({
+          type: 'column',
+          children: [{ type: 'paragraph' }],
+        })),
+      };
+      const inserted = editor.insertBlocks([columnList as never], block, 'after')[0];
+      const firstPara = inserted?.children?.[0]?.children?.[0];
+      if (firstPara?.id) {
+        try {
+          editor.setTextCursorPosition(firstPara.id, 'start');
+        } catch {
+          /* structure moved — leave the caret */
+        }
+      }
       return;
     }
   }

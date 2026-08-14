@@ -533,6 +533,51 @@ just the covered leaves and leaves the layout intact. All deletes go through
 
 ---
 
+### 6.5 Block side controls — Add block vs. block actions
+
+The two editor side-menu controls (`features/editor/WeftSideMenu.tsx`) have two
+clearly-separated jobs, and their tooltips say so:
+
+- **＋ Add block** inserts a *new* block below the current one (never "turn into").
+  It opens the shared **`BlockPicker`** — a fuzzy-searchable, keyboard-navigable
+  (↑/↓/Enter/Home/End) list driven by `BLOCK_TYPE_DEFS`, with a **Recommended** row
+  at the top. Recommendations come from real usage: `lib/blockUsage.ts` counts a
+  block only when it's actually *created* (slash menu, ＋, empty-state — never on
+  hover/open or "turn into"), stores counts in `localStorage`, and surfaces at most
+  four, hidden until there's data so the row never dominates.
+- **⠿ Handle** drags to move (native BlockNote drag, wired exactly as BlockNote's
+  own `DragHandleButton`: `draggable` + `blockDragStart`) and on click opens the
+  **`BlockActionMenu`** — a real action panel, not just Delete + Colour: a
+  fuzzy-searchable list of Turn into / Colour / Copy link to block / Duplicate /
+  Move to / Delete, with a page last-edited footer. Turn into reuses `BlockPicker`;
+  Colour only appears for blocks whose schema carries colour props; Duplicate
+  deep-clones children + props (tables, charts, toggles copy their data); Copy link
+  reuses the existing `?b=` jump param; Move to relocates the block to another page
+  via stored content. Escape steps out of a sub-view before closing the menu.
+
+**One search engine.** `lib/fuzzy.ts` (ordered-subsequence scoring with
+word-boundary / contiguity bonuses, plus a bounded-Levenshtein typo fallback so
+"delte" still finds Delete) powers both menus and the action search, so search
+behaves identically everywhere. Both menus open through the shared `Popover`
+(portalled, viewport-flipping, Escape / outside-click) with `registerOverlay=false`
+so the handle they anchor to stays put.
+
+### 6.6 Dialog system
+
+Every dialog is built on `components/ui/Modal`, so they share one look and one set
+of behaviours (§6.1 portalling, plus focus management): opening moves focus into
+the dialog (a `data-autofocus` element, else the panel), **Tab is trapped** inside,
+and closing **returns focus** to the trigger. `ConfirmDialog` is the one styled
+confirm/cancel decision — destructive variants read as destructive (warning glyph +
+danger-filled button), and Escape / backdrop / Cancel always resolve to cancel,
+never a silent confirm. `UnsavedChangesDialog` is the three-way close decision for a
+dialog holding unsaved edits (Keep editing / Discard / Save). The **Import** dialog
+(`features/editor/ImportDialog.tsx`) is a single drop-or-choose target with honest
+progress/error states and only the formats Weft can actually parse (Markdown/text,
+HTML, Weft JSON, CSV — the reciprocal of the exporters).
+
+---
+
 ## 7. Interactive states
 
 - **Hover:** background shifts to `--sunk` (on light surfaces) or `--surface` (in sidebar).

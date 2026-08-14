@@ -9,6 +9,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Menu } from '@/components/ui/Menu';
 import { Modal } from '@/components/ui/Modal';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import { toast } from '@/lib/toast';
 import { cn } from '@/lib/utils';
@@ -65,6 +66,7 @@ export default function MembersView() {
   });
 
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [removing, setRemoving] = useState<{ id: string; name: string } | null>(null);
 
   const invalidateMembers = () => qc.invalidateQueries({ queryKey: ['members', workspaceId] });
   const invalidateInvites = () => qc.invalidateQueries({ queryKey: ['invites', workspaceId] });
@@ -79,8 +81,8 @@ export default function MembersView() {
     }
   };
 
-  const removeMember = async (userId: string, name: string) => {
-    if (!window.confirm(`Remove ${name} from this workspace?`)) return;
+  const removeMember = async (userId: string) => {
+    setRemoving(null);
     try {
       await api.del(`/workspaces/${workspaceId}/members/${userId}`);
       await invalidateMembers();
@@ -175,7 +177,7 @@ export default function MembersView() {
                         {
                           label: 'Remove from workspace',
                           danger: true,
-                          onClick: () => void removeMember(m.user.id, m.user.name),
+                          onClick: () => setRemoving({ id: m.user.id, name: m.user.name }),
                         },
                       ]}
                     />
@@ -246,6 +248,21 @@ export default function MembersView() {
           onInvited={() => void invalidateInvites()}
         />
       )}
+
+      <ConfirmDialog
+        open={!!removing}
+        danger
+        title="Remove member?"
+        message={
+          <p>
+            <span className="font-medium text-ink">{removing?.name}</span> will lose access to this
+            workspace. You can invite them again later.
+          </p>
+        }
+        confirmLabel="Remove"
+        onCancel={() => setRemoving(null)}
+        onConfirm={() => removing && void removeMember(removing.id)}
+      />
     </div>
   );
 }

@@ -13,6 +13,7 @@ import { multiColumnDropCursor, locales as multiColumnLocales } from '@blocknote
 import { createMultilineBlocksPlugin, multilineBlocksPluginKey } from './multilineBlocks';
 import { createEmptyBlockDeletePlugin, emptyBlockDeletePluginKey } from './emptyBlockDelete';
 import { createQuoteShortcutPlugin, quoteShortcutPluginKey } from './quoteShortcut';
+import { createToggleBehaviorPlugin, toggleBehaviorPluginKey } from './toggleBehavior';
 import { installEmptyDocRedoFallback } from './emptyDocRedo';
 import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/mantine/style.css';
@@ -27,6 +28,7 @@ import { WeftSideMenu, PageConvertDialog } from './WeftSideMenu';
 import {
   getSlashBlockItems,
   convertBlockType,
+  addBlockAfter,
   blockPlainText,
   type BlockTypeDef,
   type BlockTypeCtx,
@@ -41,6 +43,7 @@ import { CodeCopyButton } from './CodeCopyButton';
 import { WeftFormattingToolbar } from './FormattingToolbar';
 import { EmptyState, isBlocksEmpty } from './EmptyState';
 import { extractHeadings, type OutlineHeading } from './outline';
+import { parseFileToBlocks } from '@/features/export/importContent';
 
 const colorFor = (id: string) => `hsl(${hashHue(id)} 55% 45%)`;
 
@@ -88,6 +91,8 @@ export function Editor({
   onHeadings,
   reorderRef,
   focusEditorRef,
+  importRef,
+  pageUpdatedAt,
 }: {
   pageId: string;
   workspaceId: string;
@@ -101,6 +106,13 @@ export function Editor({
   /** Set by the editor to focus the body's first block (used by the title's
    * Enter key so it jumps straight into the content). */
   focusEditorRef?: MutableRefObject<(() => void) | null>;
+  /** Set by the editor to a function that parses an uploaded file and appends the
+   * resulting blocks to the doc, so the page-menu Import dialog can push content
+   * into the editor. Resolves with how many blocks were added; rejects (with a
+   * user-facing message) when the file can't be read. */
+  importRef?: MutableRefObject<((file: File) => Promise<number>) | null>;
+  /** Page's last-edited timestamp, surfaced in the block-action menu footer. */
+  pageUpdatedAt?: string;
 }) {
   const { theme } = useThemeStore();
   const navigate = useNavigate();
@@ -161,11 +173,13 @@ export function Editor({
     tt.registerPlugin(createMultilineBlocksPlugin(editor), prepend);
     tt.registerPlugin(createEmptyBlockDeletePlugin(editor), prepend);
     tt.registerPlugin(createQuoteShortcutPlugin(editor), prepend);
+    tt.registerPlugin(createToggleBehaviorPlugin(editor), prepend);
     return () => {
       try {
         tt.unregisterPlugin(multilineBlocksPluginKey);
         tt.unregisterPlugin(emptyBlockDeletePluginKey);
         tt.unregisterPlugin(quoteShortcutPluginKey);
+        tt.unregisterPlugin(toggleBehaviorPluginKey);
       } catch {
         /* editor already torn down */
       }
@@ -543,10 +557,59 @@ export function Editor({
     };
   }, [editor, focusEditorRef]);
 
+  // Expose "parse a file and append its blocks" so the page-menu Import dialog can
+  // push content into the live document. Parsing (importContent.ts) needs the live
+  // editor for Markdown/HTML, so it lives here. Appends after the last block, or
+  // replaces the doc when it's just one empty paragraph, then focuses the first
+  // imported block. Rejects with a user-facing message the dialog shows.
+  useEffect(() => {
+    if (!importRef) return;
+    importRef.current = async (file: File) => {
+      const { blocks } = await parseFileToBlocks(file, editor);
+      if (!blocks.length) return 0;
+      const doc = editor.document as any[];
+      const last = doc[doc.length - 1];
+      const inserted = isBlocksEmpty(doc)
+        ? editor.replaceBlocks(doc.map((b) => b.id), blocks as never).insertedBlocks
+        : editor.insertBlocks(blocks as never, last, 'after');
+      const first = inserted?.[0];
+      if (first?.id) {
+        try {
+          editor.setTextCursorPosition(first.id, 'start');
+        } catch {
+          /* first imported block isn't a text block — no caret to place */
+        }
+      }
+      return blocks.length;
+    };
+    return () => {
+      if (importRef) importRef.current = null;
+    };
+  }, [editor, importRef]);
+
+  // The "+" add-block verb: insert a brand-new block after the clicked one
+  // (never converts it). Distinct from `handleBlockConvert` above (§17–19).
+  const handleAddBlock = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (block: any, def: BlockTypeDef) => {
+      void addBlockAfter(def, block, blockCtx);
+    },
+    [blockCtx],
+  );
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const renderSideMenu = useCallback(
-    (menuProps: any) => <WeftSideMenu {...menuProps} onConvert={handleBlockConvert} />,
-    [handleBlockConvert],
+    (menuProps: any) => (
+      <WeftSideMenu
+        {...menuProps}
+        onConvert={handleBlockConvert}
+        onAddBlock={handleAddBlock}
+        ctx={blockCtx}
+        tree={tree ?? []}
+        pageUpdatedAt={pageUpdatedAt}
+      />
+    ),
+    [handleBlockConvert, handleAddBlock, blockCtx, tree, pageUpdatedAt],
   );
 
   return (

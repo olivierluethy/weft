@@ -242,6 +242,28 @@
   display: none;
 }
 
+/* Empty toggle content area (edit mode only). An OPEN toggle with no child
+   block-group has no visible content region, so the user can't tell where the
+   collapsible content goes or that they can drop into it. We render a quiet,
+   indented hint below the title — a real affordance, editor-only, never stored
+   or exported (scoped to `contenteditable='true'`, drawn as a CSS pseudo).
+   `pointer-events: none` so it never eats a drop; Enter in the title (see
+   toggleBehavior.ts) is the primary way to add the first child. The indent
+   (~1.75rem) lines the hint up under the title text, past the chevron. */
+.bn-editor[contenteditable='true']
+  .bn-block:has(> .react-renderer > .bn-block-content > .wf-toggle[data-open='true']):not(
+    :has(> .bn-block-group)
+  )::after {
+  content: 'Empty toggle. Press Enter to add content inside, or drag blocks in.';
+  display: block;
+  margin: 1px 0 3px 1.75rem;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--ink-faint);
+  pointer-events: none;
+  user-select: none;
+}
+
 /* ── Multi-column containers: make each column a legible drop zone ──────────────
  *
  * The official `@blocknote/xl-multi-column` (mention.tsx `withMultiColumn`) renders

@@ -102,7 +102,7 @@ export function fuzzyScore(query: string, target: string): number | null {
 }
 
 /** The best score of `query` over several candidate strings (or `null`). */
-export function fuzzyScoreMany(query: string, targets: string[]): number | null {
+export function fuzzyScoreMany(query: string, targets: readonly string[]): number | null {
   let best: number | null = null;
   for (const target of targets) {
     const s = fuzzyScore(query, target);
@@ -117,11 +117,11 @@ export function fuzzyScoreMany(query: string, targets: string[]): number | null 
  * returns the items in their original order. Sort is stable for equal scores.
  */
 export function fuzzyFilter<T>(
-  items: T[],
+  items: readonly T[],
   query: string,
-  getStrings: (item: T) => string | string[],
+  getStrings: (item: T) => string | readonly string[],
 ): T[] {
-  if (!query.trim()) return items;
+  if (!query.trim()) return [...items];
   const scored: { item: T; score: number; index: number }[] = [];
   items.forEach((item, index) => {
     const raw = getStrings(item);

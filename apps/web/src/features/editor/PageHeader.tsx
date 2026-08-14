@@ -7,33 +7,18 @@ import {
   ImagePlus,
   Smile,
   Lock,
-  Unlock,
   BarChart3,
-  Code2,
-  Maximize2,
-  Minimize2,
-  Download,
-  Upload,
-  Wallpaper,
   MessageSquare,
   Move,
   Trash2,
   Type,
-  Check,
-  Link2,
-  ClipboardCopy,
-  CopyPlus,
-  FolderInput,
   Copy,
   Pencil,
-  SpellCheck,
 } from 'lucide-react';
-import { PAGE_WIDTH } from '@weft/shared';
 import type { PageDetail, Breadcrumb } from '@/lib/queries';
 import { cn } from '@/lib/utils';
 import { COVER_HEIGHT } from '@weft/shared';
 import { Popover } from '@/components/ui/Popover';
-import { Menu } from '@/components/ui/Menu';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { IconButton } from '@/components/ui/Button';
 import { IconPicker, PageIcon } from './pickers/IconPicker';
@@ -54,6 +39,7 @@ import {
   exportJson,
   exportDocx,
   exportPdf,
+  exportText,
   toMarkdown,
 } from '@/features/export/exporters';
 import { toast } from '@/lib/toast';
@@ -62,7 +48,9 @@ import { api } from '@/lib/api';
 import { useInvalidate } from '@/lib/queries';
 import { MovePageDialog } from './MovePageDialog';
 import { ImportDialog } from './ImportDialog';
-import { useEditorPrefs } from '@/hooks/useEditorPrefs';
+import { PageOptionsPanel, type PageOptionsHandlers } from './PageOptionsPanel';
+import { FontList } from './FontList';
+import { DEFAULT_PAGE_FONT } from './pageFonts';
 
 /** Shared style for the horizontal page-header meta actions (Add cover / Add
  * icon / Add tag). Kept in sync with `META_PILL` in TagEditor.tsx (§13-14). */
@@ -171,8 +159,6 @@ export function PageHeader({
 
   const navigate = useNavigate();
   const invalidate = useInvalidate();
-  const spellcheck = useEditorPrefs((s) => s.spellcheck);
-  const toggleSpellcheck = useEditorPrefs((s) => s.toggleSpellcheck);
 
   // ── "…" menu actions ───────────────────────────────────────────────────────
   const copyLink = () => {
@@ -219,17 +205,36 @@ export function PageHeader({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page.id]);
 
-  const font = page.fontFamily ?? 'serif';
-  const exportItems = [
-    { label: 'Markdown (.md)', onClick: () => exportMarkdown(page.title, getBlocks()) },
-    { label: 'HTML (.html)', onClick: () => exportHtmlFile(page.title, getBlocks(), font) },
-    { label: 'JSON (.json)', onClick: () => exportJson(page.title, page) },
-    { label: 'Word (.docx)', onClick: () => void exportDocx(page.title, getBlocks(), font) },
-    { label: 'PDF (print)', onClick: () => exportPdf(page.title, getBlocks(), font) },
+  const font = page.fontFamily ?? DEFAULT_PAGE_FONT;
+
+  // Export targets, in the order a writer reaches for them. Each carries the
+  // format its icon draws (components/ui/FileFormatIcon.tsx) rather than a
+  // generic download glyph, so PDF and Word are told apart before reading.
+  const exportItems: PageOptionsHandlers['exports'] = [
+    { id: 'md', label: 'Markdown', format: 'md', run: () => exportMarkdown(page.title, getBlocks()) },
+    { id: 'txt', label: 'Plain text', format: 'txt', run: () => exportText(page.title, getBlocks()) },
+    { id: 'json', label: 'JSON', format: 'json', run: () => exportJson(page.title, page) },
+    { id: 'docx', label: 'Word', format: 'docx', run: () => void exportDocx(page.title, getBlocks(), font) },
+    { id: 'pdf', label: 'PDF', format: 'pdf', run: () => exportPdf(page.title, getBlocks(), font) },
+    { id: 'html', label: 'HTML', format: 'html', run: () => exportHtmlFile(page.title, getBlocks(), font) },
   ];
 
-  const setWidth = (delta: number) =>
-    onUpdate({ width: Math.min(PAGE_WIDTH.max, Math.max(PAGE_WIDTH.min, (page.width || 720) + delta)) });
+  const optionHandlers: PageOptionsHandlers = {
+    changeCover: () => setCoverOpen(true),
+    setBackground: () => {
+      const url = prompt('Background image URL');
+      if (url) onUpdate({ backgroundUrl: url });
+    },
+    removeBackground: () => onUpdate({ backgroundUrl: null }),
+    customCss: () => setShowCss(true),
+    copyLink,
+    copyContents,
+    duplicate: () => void duplicatePage(),
+    moveTo: () => setMoveOpen(true),
+    trash: () => void trashPage(),
+    importFile: editable && onImportFile ? () => setImportOpen(true) : undefined,
+    exports: exportItems,
+  };
 
   return (
     // NB: no wrapping element here. A wrapper <div> would become the sticky
@@ -334,16 +339,14 @@ export function PageHeader({
               align="end"
               trigger={<IconButton label="Font family" title={undefined}><Type size={16} /></IconButton>}
             >
-              {(close) => (
-                <FontPicker
-                  value={page.fontFamily ?? 'serif'}
-                  editable={editable}
-                  onPick={(f) => {
-                    onUpdate({ fontFamily: f });
-                    close();
-                  }}
-                />
-              )}
+              {/* Live, like everywhere else: picking a face re-faces the page
+                  and leaves the list open so the next one is one click away. */}
+              <FontList
+                value={page.fontFamily}
+                editable={editable}
+                onPick={(f) => onUpdate({ fontFamily: f })}
+                className="max-h-[min(460px,70vh)] w-72 rounded-xl border border-line bg-surface shadow-lg"
+              />
             </Popover>
           </Tooltip>
           <Tooltip label={page.isFavorite ? 'Remove from favorites' : 'Add to favorites'}>
@@ -372,71 +375,29 @@ export function PageHeader({
             </IconButton>
           </Tooltip>
 
+          {/* More options. A Popover, not a Menu: `Menu` closes on every item
+              click, which would make every live setting a one-shot (§6.7). */}
           <Tooltip label="More options">
-          <Menu
-            align="end"
-            trigger={<IconButton label="More" title={undefined}><MoreHorizontal size={16} /></IconButton>}
-            items={[
-              {
-                label: page.coverUrl ? 'Change cover' : 'Add cover',
-                icon: <ImagePlus size={15} />,
-                onClick: () => setCoverOpen(true),
-                disabled: !editable,
-              },
-              {
-                label: page.isFullWidth ? 'Fixed width' : 'Full width',
-                icon: page.isFullWidth ? <Minimize2 size={15} /> : <Maximize2 size={15} />,
-                onClick: () => onUpdate({ isFullWidth: !page.isFullWidth }),
-                disabled: !editable,
-              },
-              { label: 'Narrower', icon: <Minimize2 size={15} />, onClick: () => setWidth(-60), disabled: !editable || page.isFullWidth },
-              { label: 'Wider', icon: <Maximize2 size={15} />, onClick: () => setWidth(60), disabled: !editable || page.isFullWidth },
-              {
-                label: page.isLocked ? 'Unlock page' : 'Lock page',
-                icon: page.isLocked ? <Unlock size={15} /> : <Lock size={15} />,
-                onClick: () => onUpdate({ isLocked: !page.isLocked }),
-                disabled: role === 'viewer',
-              },
-              {
-                label: page.backgroundUrl ? 'Remove background' : 'Set page background',
-                icon: <Wallpaper size={15} />,
-                onClick: () =>
-                  page.backgroundUrl
-                    ? onUpdate({ backgroundUrl: null })
-                    : (() => {
-                        const url = prompt('Background image URL');
-                        if (url) onUpdate({ backgroundUrl: url });
-                      })(),
-                disabled: !editable,
-              },
-              { label: 'Custom CSS', icon: <Code2 size={15} />, onClick: () => setShowCss(true), disabled: !editable },
-              { divider: true, label: '' },
-              { label: 'Copy link', icon: <Link2 size={15} />, onClick: copyLink },
-              { label: 'Copy page contents', icon: <ClipboardCopy size={15} />, onClick: copyContents },
-              { label: 'Duplicate', icon: <CopyPlus size={15} />, onClick: () => void duplicatePage(), disabled: !editable },
-              { label: 'Move to', icon: <FolderInput size={15} />, onClick: () => setMoveOpen(true), disabled: !editable },
-              { label: 'Move to trash', icon: <Trash2 size={15} />, onClick: () => void trashPage(), danger: true, disabled: role === 'viewer' },
-              { divider: true, label: '' },
-              {
-                label: `Spellcheck: ${spellcheck ? 'On' : 'Off'}`,
-                icon: <SpellCheck size={15} />,
-                onClick: toggleSpellcheck,
-                checked: spellcheck,
-              },
-              { divider: true, label: '' },
-              {
-                label: 'Import…',
-                icon: <Upload size={15} />,
-                onClick: () => setImportOpen(true),
-                disabled: !editable || !onImportFile,
-              },
-              ...exportItems.map((e) => ({
-                label: `Export · ${e.label}`,
-                icon: <Download size={15} />,
-                onClick: e.onClick,
-              })),
-            ]}
-          />
+            <Popover
+              align="end"
+              className="z-overlay"
+              trigger={
+                <IconButton label="More" title={undefined} data-weft-more-options>
+                  <MoreHorizontal size={16} />
+                </IconButton>
+              }
+            >
+              {(close) => (
+                <PageOptionsPanel
+                  page={page}
+                  role={role}
+                  editable={editable}
+                  onUpdate={onUpdate}
+                  handlers={optionHandlers}
+                  close={close}
+                />
+              )}
+            </Popover>
           </Tooltip>
         </div>
       </div>
@@ -587,76 +548,6 @@ export function PageHeader({
     // handled inside CoverArea via its own popover; this menu item focuses it.
     document.getElementById('weft-cover-trigger')?.click();
   }
-}
-
-const FONT_OPTIONS: {
-  key: 'serif' | 'sans' | 'mono';
-  label: string;
-  face: string;
-  desc: string;
-  css: string;
-}[] = [
-  { key: 'serif', label: 'Serif', face: 'Newsreader', desc: 'Editorial, classic', css: 'Newsreader, Georgia, serif' },
-  { key: 'sans', label: 'Sans', face: 'Inter', desc: 'Clean, modern', css: 'Inter, system-ui, sans-serif' },
-  { key: 'mono', label: 'Mono', face: 'JetBrains Mono', desc: 'Fixed-width, code', css: "'JetBrains Mono', ui-monospace, monospace" },
-];
-
-/** Page-level font family picker (Notion-style). Persisted via onUpdate. */
-function FontPicker({
-  value,
-  editable,
-  onPick,
-}: {
-  value: string;
-  editable: boolean;
-  onPick: (font: 'serif' | 'sans' | 'mono') => void;
-}) {
-  return (
-    <div className="w-72 rounded-md border border-line bg-surface p-1.5 shadow-md">
-      <p className="px-2 pb-1.5 pt-1 text-2xs font-semibold uppercase tracking-wide text-ink-faint">
-        Page font
-      </p>
-      <div className="flex flex-col gap-0.5">
-        {FONT_OPTIONS.map((opt) => {
-          const active = value === opt.key;
-          return (
-            <button
-              key={opt.key}
-              disabled={!editable}
-              onClick={() => onPick(opt.key)}
-              className={cn(
-                'group flex w-full items-center gap-3 rounded-md px-2 py-2 text-left transition disabled:cursor-not-allowed disabled:opacity-60',
-                active ? 'bg-thread-soft ring-1 ring-thread/30' : 'hover:bg-sunk',
-              )}
-            >
-              <span
-                className={cn(
-                  'flex h-10 w-10 shrink-0 items-center justify-center rounded-md border text-xl leading-none',
-                  active ? 'border-thread/40 bg-surface text-thread' : 'border-line-strong bg-paper text-ink',
-                )}
-                style={{ fontFamily: opt.css }}
-                aria-hidden
-              >
-                Ag
-              </span>
-              <span className="flex min-w-0 flex-1 flex-col">
-                <span
-                  className={cn('truncate text-[15px] font-semibold', active ? 'text-thread' : 'text-ink')}
-                  style={{ fontFamily: opt.css }}
-                >
-                  {opt.label}
-                </span>
-                <span className="truncate text-2xs text-ink-faint">
-                  {opt.face} · {opt.desc}
-                </span>
-              </span>
-              {active && <Check size={16} className="shrink-0 text-thread" />}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
 }
 
 function CoverArea({

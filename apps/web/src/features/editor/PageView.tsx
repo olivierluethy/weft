@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { flashBlock } from '@/features/search/jump';
 import { Link2 } from 'lucide-react';
 import { PAGE_WIDTH } from '@weft/shared';
@@ -25,6 +25,7 @@ export function PageView() {
   const { user } = useAuth();
   const { workspaceId } = useWorkspace();
   const invalidate = useInvalidate();
+  const queryClient = useQueryClient();
   const [stats, setStats] = useState<DocStats>(() => computeStats([]));
   const [headings, setHeadings] = useState<OutlineHeading[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -69,6 +70,17 @@ export function PageView() {
   const update = useCallback(
     async (partial: Record<string, unknown>) => {
       if (!pageId) return;
+      // Apply locally first. The page-options panel (§6.7) is a live control
+      // panel: picking a width or a font has to re-render the page on the click,
+      // not one server round-trip later — and the control's own state is read
+      // back off this same object, so a lag would show a checked radio whose
+      // page hasn't moved yet. The refetch below reconciles (and silently undoes
+      // this) if the PATCH didn't take.
+      queryClient.setQueryData(['page', pageId], (prev: unknown) =>
+        prev && typeof prev === 'object' && 'page' in prev
+          ? { ...prev, page: { ...(prev as { page: object }).page, ...partial } }
+          : prev,
+      );
       await api.patch(`/pages/${pageId}`, partial).catch(() => undefined);
       await refetch();
       // Title/icon changes should reflect in the sidebar tree.
@@ -76,7 +88,7 @@ export function PageView() {
         void invalidate.tree(workspaceId);
       }
     },
-    [pageId, refetch, invalidate, workspaceId],
+    [pageId, refetch, invalidate, workspaceId, queryClient],
   );
 
   if (isLoading || !page || !user) {

@@ -315,16 +315,26 @@ below sibling chrome (this was the real cause of the sidebar `＋`/`⋯` bleedin
 popover and the History panel). Portalling lifts each overlay to the root stacking context
 where a single, documented z-scale decides order:
 
-| Token (Tailwind `z-*`) | Value | Layer                                                   |
-| ---------------------- | ----- | ------------------------------------------------------- |
-| `z-header`             | 20    | in-flow sticky page/section headers                     |
-| `z-scrim-low`          | 30    | mobile sidebar backdrop, floating reopen button         |
-| `z-sidebar`            | 40    | mobile sidebar drawer                                    |
-| `z-peek`               | 60    | docked side-peek panel + its scrim                      |
-| `z-scrim`              | 70    | modals, dialogs, full-screen panels (portalled)         |
-| `z-overlay`            | 1000  | menus, popovers, dropdowns, context menus (portalled)   |
-| `z-tooltip`            | 1100  | tooltips (portalled)                                     |
-| `z-toast`              | 1200  | toasts (portalled) — always on top                      |
+| Token (Tailwind `z-*`) | Value       | Layer                                                   |
+| ---------------------- | ----------- | ------------------------------------------------------- |
+| `z-header`             | 20          | in-flow sticky page/section headers                     |
+| `z-scrim-low`          | 30          | mobile sidebar backdrop, floating reopen button         |
+| `z-sidebar`            | 40          | mobile sidebar drawer                                    |
+| `z-peek`               | 60          | docked side-peek panel + its scrim                      |
+| _(reserved)_           | 2000–4000   | **BlockNote in-editor floating UI** — see note below    |
+| `z-scrim`              | 5000        | modals, dialogs, full-screen panels (portalled)         |
+| `z-overlay`            | 6000        | menus, popovers, dropdowns, context menus (portalled)   |
+| `z-tooltip`            | 6100        | tooltips (portalled)                                     |
+| `z-toast`              | 6200        | toasts (portalled) — always on top                      |
+
+**Reserved band 2000–4000 (BlockNote).** The editor library portals its *own* affordances
+to `<body>` at hard-coded z-index — the `＋`/⠿ side menu and slash suggestion menu at 2000,
+the formatting toolbar at 3000, one element at 4000. Those are **content-level** affordances,
+so every app overlay must sit *above* the whole band; otherwise the editor's hover handles
+bleed over an app popover (this was the real cause of the page **emoji picker** appearing
+under the block `＋`/⠿ controls — not a missing z-index on the picker, but the app-overlay
+band starting at 1000, *below* BlockNote's 2000). The app band therefore starts at `z-scrim`
+5000. Do not place any app overlay inside 2000–4000.
 
 Floating overlays sit **above** scrims so a menu opened from inside a modal still lands on
 top. Never introduce a raw `z-[n]`; pick a layer. **Positioning** is shared: anchored

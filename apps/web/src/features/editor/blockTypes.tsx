@@ -68,36 +68,96 @@ import { HEADING_LABELS, HEADING_LEVELS } from './headingScale';
 import { weftCustomBlockSpecs } from './blocks';
 
 /**
- * Land the caret at the end of a just-inserted block's inline content, after its
- * node view has committed to the DOM.
+ * Land the caret inside a just-inserted custom-inline block so the first keystroke
+ * types into it — the "text jumps to the next line" bug for Toggle / Highlight
+ * (callout) / Quote.
  *
- * WHY THIS EXISTS — the "text jumps to the next line" bug for Toggle / Highlight
- * (callout) / Quote. Those are *custom React* blocks: their editable element
- * (`contentDOM`) is mounted asynchronously by TipTap's React node-view renderer,
- * one commit *after* the ProseMirror node is created. `insertOrUpdateBlock`
- * places the text cursor synchronously, so for a custom block that runs *before*
- * the editable exists; the slash-menu popover also holds DOM focus at that moment.
- * The model selection is therefore discarded when focus returns to the editor,
- * and the first keystroke falls to the next line/block. Built-in blocks
- * (paragraph, bullet/numbered/checklist, heading) build their `contentDOM`
- * synchronously in `renderHTML`, so they never hit this and must not be touched.
+ * WHAT ACTUALLY BREAKS (measured, not assumed — headless CDP, driving the real app)
+ * — these are *custom React* blocks. On insert, BlockNote's model selection IS put
+ * inside the new block (the block even gets `data-is-empty-and-focused`), but for an
+ * EMPTY custom node view ProseMirror never syncs the *browser* caret into the
+ * content element: the DOM selection strands at the block-container boundary
+ * (`DIV.bn-block`, offset 1), outside the editable. `editor.setTextCursorPosition`
+ * cannot move it there either — re-asserting the model caret, on one frame or on
+ * twenty, changes nothing because the failure is purely on the DOM-selection side.
+ * The first keystroke, landing at that boundary, spawns a *new* block instead of
+ * typing inline. Built-in blocks (paragraph, lists, heading) build their editable
+ * synchronously with a real caret target, so they never hit this and must not be
+ * touched. A mouse click "fixes" it precisely because a click drops a native DOM
+ * caret into the content element — which is the workaround users were forced into.
  *
- * The fix re-asserts the caret on the next animation frame — once the React node
- * view has mounted its editable — and hands focus back to the editor, mirroring
- * the "+" convert path (Editor.tsx `handleBlockConvert`). This is the genuine
- * sequencing fix for async-mounted node views, applied once at the shared insert
- * source, not a per-block focus hack.
+ * THE FIX — do programmatically what the click does: once the node view has
+ * committed, drop a collapsed DOM Range into the block's (empty) content element
+ * and let ProseMirror adopt it. Verified end-to-end: after this the selection sits
+ * inside the block (`anchorType` = callout/quote/toggle) and instant typing lands
+ * inline with no stray block. Runs on animation frames until the content element
+ * exists and the caret is confirmed inside it (the node view mounts within a frame
+ * or two), with a safety cap. `editor.setTextCursorPosition` is kept as the model
+ * counterpart so undo/history and BlockNote's own state agree with the DOM.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function focusInsertedInlineBlock(editor: any, blockId: string): void {
-  requestAnimationFrame(() => {
-    try {
-      editor.focus();
-      editor.setTextCursorPosition(blockId, 'end');
-    } catch {
-      /* block was removed or isn't a text block before the frame ran */
+  // Safety cap so a block that never mounts an editable can't spin forever
+  // (~30 frames ≈ 0.5s). The call-site guard limits this to custom inline blocks,
+  // which always mount an editable, so the cap is a backstop, not the normal exit.
+  const MAX_FRAMES = 30;
+  let frames = 0;
+
+  const blockEl = (): HTMLElement | null =>
+    document.querySelector(`[data-id="${CSS.escape(blockId)}"]`);
+
+  // The editable "content hole": the element ProseMirror uses as the block's inline
+  // contentDOM. While empty it has no element children (or just a trailing <br>) and
+  // is never one of the block's `contenteditable="false"` chrome (emoji, chevron).
+  const findContentHole = (root: HTMLElement): HTMLElement | null => {
+    const bc = root.querySelector<HTMLElement>('.bn-block-content[data-content-type]');
+    if (!bc) return null;
+    const candidates = [...bc.querySelectorAll<HTMLElement>('*')].reverse();
+    return (
+      candidates.find(
+        (el) =>
+          el.getAttribute('contenteditable') !== 'false' &&
+          !el.closest('[contenteditable="false"]') &&
+          (el.childElementCount === 0 ||
+            (el.childElementCount === 1 && el.firstElementChild!.tagName === 'BR')),
+      ) ?? null
+    );
+  };
+
+  const caretInsideBlock = (): boolean => {
+    const el = blockEl();
+    const sel = window.getSelection();
+    return !!(el && sel && sel.anchorNode && el.contains(sel.anchorNode));
+  };
+
+  const attempt = (): void => {
+    const el = blockEl();
+    if (!el) return; // block removed before we could focus it
+
+    const hole = findContentHole(el);
+    if (hole) {
+      try {
+        editor.focus();
+        // Model caret — keeps BlockNote/PM state and undo history in agreement.
+        editor.setTextCursorPosition(blockId, 'end');
+        // Browser caret — the part setTextCursorPosition can't do for an empty
+        // custom node view. Mirrors a mouse click into the block.
+        const range = document.createRange();
+        range.selectNodeContents(hole);
+        range.collapse(true);
+        const sel = window.getSelection();
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      } catch {
+        /* transient during mount — retried next frame */
+      }
+      if (caretInsideBlock()) return; // done
     }
-  });
+
+    if (++frames < MAX_FRAMES) requestAnimationFrame(attempt);
+  };
+
+  requestAnimationFrame(attempt);
 }
 
 /**

@@ -462,6 +462,28 @@ The Workspace Overview (`HomeView`) mirrors the fast-answer intent with one-clic
 quick-filter chips (Edited today/this week, Created this month/this year) — it
 does **not** duplicate the navigator.
 
+### 6.4 Version history panel
+
+The Version history dialog (`features/history/HistoryPanel.tsx`) is a left **timeline
+rail** + a right **word-diff pane**. The rail makes time orientation immediate:
+
+- **Strong day sections.** Each day is a section headed by a prominent primary label
+  (`Today` / `Yesterday` / weekday, `font-display text-base font-semibold --ink`) over a
+  secondary full date (`text-2xs --ink-faint`) and an edit count, with a hairline rule.
+  The header is sticky, so the current day stays named while scrolling. This replaces the
+  old tiny grey uppercase label — Today/Yesterday now read at a glance.
+- **Per-day activity ribbon.** Under each header, the day's snapshots collapse into an
+  hour-by-hour bar ribbon spanning the day's active hours. Bar height ∝ the count of
+  **real** snapshots in that hour (never synthetic); the busiest/selected hour is `--thread`,
+  others `--thread/45`, quiet hours a faint `--line/40` track. Bars are the scrubber:
+  clicking one selects that hour's latest snapshot, so an activity peak leads straight to
+  *what changed* in the diff pane. End labels mark the first/last active hour.
+- **Time → activity → change rows.** Each row leads with the time (`font-display`,
+  tabular), then the kind (Edited / Autosave / …) and word count, and a **word-delta chip**
+  (`+N` on `--diff-add-bg`, `−N` on `--diff-del-bg`, `±0` faint) derived from the real
+  stored word counts — no invented change descriptions. The diff pane and Restore are
+  unchanged.
+
 ### 6.3 Marquee multi-select
 
 Rubber-band block selection (`features/editor/MarqueeSelect.tsx`) anchors in

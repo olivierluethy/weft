@@ -9,6 +9,7 @@ import {
   type DefaultReactSuggestionItem,
 } from '@blocknote/react';
 import { filterSuggestionItems } from '@blocknote/core';
+import { createMultilineBlocksPlugin, multilineBlocksPluginKey } from './multilineBlocks';
 import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/mantine/style.css';
 import './editor.css';
@@ -124,6 +125,30 @@ export function Editor({
       return location.origin + upload.url;
     },
   });
+
+  // DEV-only: expose the live editor for headless introspection / interaction tests.
+  // Never runs in production builds (`import.meta.env.DEV` is statically false there).
+  if (import.meta.env.DEV) {
+    (window as unknown as Record<string, unknown>).__weftEditor = editor;
+  }
+
+  // Notion-style multi-line Enter handling for Highlight/Quote. Registered before
+  // BlockNote's own Enter keymap so it can claim the key inside those blocks; a
+  // no-op everywhere else. See multilineBlocks.ts for the mechanism.
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const tt = (editor as any)._tiptapEditor;
+    if (!tt) return;
+    const plugin = createMultilineBlocksPlugin(editor);
+    tt.registerPlugin(plugin, (newPlugin: unknown, plugins: unknown[]) => [newPlugin, ...plugins]);
+    return () => {
+      try {
+        tt.unregisterPlugin(multilineBlocksPluginKey);
+      } catch {
+        /* editor already torn down */
+      }
+    };
+  }, [editor]);
 
   // `@` menu: insert a page-mention inline chip that the server turns into a backlink.
   const getMentionItems = (query: string): DefaultReactSuggestionItem[] =>

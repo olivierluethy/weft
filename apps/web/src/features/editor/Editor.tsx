@@ -35,6 +35,7 @@ import { weftSchema } from './mention';
 import { SlashMenu } from './SlashMenu';
 import { MarqueeSelect } from './MarqueeSelect';
 import { CodeLanguagePicker } from './CodeLanguagePicker';
+import { CodeCopyButton } from './CodeCopyButton';
 import { WeftFormattingToolbar } from './FormattingToolbar';
 import { EmptyState, isBlocksEmpty } from './EmptyState';
 import { extractHeadings, type OutlineHeading } from './outline';
@@ -540,6 +541,7 @@ export function Editor({
     <>
     {editable && <MarqueeSelect editor={editor} />}
     {editable && <CodeLanguagePicker editor={editor} />}
+    {editable && <CodeCopyButton editor={editor} />}
     <div className="relative">
     <BlockNoteView
       editor={editor}

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { createReactBlockSpec } from '@blocknote/react';
+import { Plus, Trash2 } from 'lucide-react';
 
 type Datum = { label: string; value: number };
 const SAMPLE = '[{"label":"Mon","value":12},{"label":"Tue","value":19},{"label":"Wed","value":7},{"label":"Thu","value":15},{"label":"Fri","value":9}]';
@@ -105,6 +106,63 @@ function NumberChart({ data }: { data: Datum[] }) {
   );
 }
 
+/** Intuitive label/value editor for the chart's underlying data. Every edit rewrites
+ * the block's `data` prop, so the chart above re-renders reactively (and it persists
+ * via Yjs). Uncontrolled inputs keyed by their value so external changes reseed them
+ * without stealing focus mid-type. */
+function ChartDataEditor({ data, onChange }: { data: Datum[]; onChange: (d: Datum[]) => void }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex gap-1.5 px-1 text-2xs font-semibold uppercase tracking-wide text-ink-faint">
+        <span className="flex-1">Label</span>
+        <span className="w-20">Value</span>
+        <span className="w-6" />
+      </div>
+      {data.map((d, i) => (
+        <div key={i} className="flex items-center gap-1.5">
+          <input
+            key={`l${d.label}`}
+            defaultValue={d.label}
+            onBlur={(e) =>
+              e.target.value !== d.label &&
+              onChange(data.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))
+            }
+            onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+            placeholder="Label"
+            className="flex-1 rounded border border-line bg-paper px-2 py-1 text-sm text-ink outline-none focus:border-thread"
+          />
+          <input
+            key={`v${d.value}`}
+            type="number"
+            defaultValue={d.value}
+            onBlur={(e) => {
+              const v = Number(e.target.value) || 0;
+              if (v !== d.value) onChange(data.map((x, j) => (j === i ? { ...x, value: v } : x)));
+            }}
+            onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+            className="w-20 rounded border border-line bg-paper px-2 py-1 text-sm text-ink outline-none focus:border-thread"
+          />
+          <button
+            type="button"
+            aria-label="Delete point"
+            onClick={() => onChange(data.filter((_, j) => j !== i))}
+            className="rounded p-1 text-ink-faint transition hover:bg-madder-soft/40 hover:text-madder"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={() => onChange([...data, { label: `Item ${data.length + 1}`, value: 0 }])}
+        className="mt-0.5 flex items-center gap-1.5 self-start rounded px-2 py-1 text-sm text-ink-faint transition hover:bg-sunk hover:text-ink"
+      >
+        <Plus size={14} /> Add point
+      </button>
+    </div>
+  );
+}
+
 export const Chart = createReactBlockSpec(
   {
     type: 'chart',
@@ -132,16 +190,16 @@ export const Chart = createReactBlockSpec(
               </button>
             )}
           </div>
-          {editing ? (
-            <textarea
-              defaultValue={block.props.data}
-              onBlur={(e) => editor.updateBlock(block, { props: { data: e.target.value } })}
-              className="h-24 w-full resize-y rounded border border-line bg-sunk p-2 font-mono text-xs text-ink outline-none"
-            />
-          ) : data.length ? (
-            <V data={data} />
-          ) : (
-            <p className="text-xs text-ink-faint">No data — click “Edit data” and provide JSON like {SAMPLE.slice(0, 40)}…</p>
+          {data.length ? <V data={data} /> : (
+            <p className="text-xs text-ink-faint">No data yet — click “Edit data” to add points.</p>
+          )}
+          {editing && (
+            <div className="mt-2 border-t border-line pt-2">
+              <ChartDataEditor
+                data={data}
+                onChange={(next) => editor.updateBlock(block, { props: { data: JSON.stringify(next) } })}
+              />
+            </div>
           )}
         </div>
       );

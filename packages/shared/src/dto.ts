@@ -167,3 +167,57 @@ export interface PageTreeNode {
   hasChildren: boolean;
   updatedAt: string;
 }
+
+// ── Workspace overview ────────────────────────────────────────────────
+/** One page as shown in the Workspace Overview: created/edited timestamps and
+ * an approximate content size (word count) so pages can be compared at a
+ * glance. Word count is computed server-side from the page's BlockNote content;
+ * this is why the overview has its own endpoint rather than reusing the (lean)
+ * sidebar tree. */
+export interface WorkspaceOverviewPage {
+  id: string;
+  title: string;
+  icon: string | null;
+  parentId: string | null;
+  isFavorite: boolean;
+  createdAt: string;
+  updatedAt: string;
+  wordCount: number;
+  childCount: number;
+}
+
+// ── Activity history ──────────────────────────────────────────────────
+/** A single real change in the workspace. Derived from durable records only —
+ * page creation (`Page.createdAt`) and content snapshots (`Version` rows,
+ * written when a user leaves an edited page / restores / saves) — never from
+ * transient UI state, so the feed reflects actual document changes. */
+export interface ActivityEvent {
+  /** Stable React key: `created:<pageId>` for creation, the version id for edits. */
+  id: string;
+  type: 'created' | 'edited';
+  pageId: string;
+  pageTitle: string;
+  pageIcon: string | null;
+  /** ISO timestamp of the change. */
+  at: string;
+  /** Word count at this point (0 for an empty/new page). */
+  wordCount: number;
+  /** Word count of the previous snapshot of the same page, for a delta. */
+  prevWordCount: number | null;
+  /** Version id (edits only) — fetch its content to show what changed. */
+  versionId: string | null;
+  /** Predecessor version id (edits only) — the other side of the diff. */
+  prevVersionId: string | null;
+  /** Version kind: manual | auto | blur | restore (edits only). */
+  kind: string | null;
+}
+
+export interface ActivityFeed {
+  events: ActivityEvent[];
+  /** Overall activity span, so the client can build year/month navigation. */
+  range: { earliest: string; latest: string } | null;
+  /** The window these events cover (month is null for a whole-year view). */
+  window: { year: number; month: number | null };
+  /** True when the window held more events than the returned cap. */
+  truncated: boolean;
+}

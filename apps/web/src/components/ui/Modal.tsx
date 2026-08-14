@@ -2,6 +2,7 @@ import { useEffect, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Portal } from './Portal';
+import { useOverlayOpen } from '@/lib/overlaySignal';
 
 export function Modal({
   open,
@@ -24,6 +25,8 @@ export function Modal({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
+
+  useOverlayOpen(open);
 
   if (!open) return null;
   const widths = { sm: 'max-w-[420px]', md: 'max-w-[560px]', lg: 'max-w-[720px]' };

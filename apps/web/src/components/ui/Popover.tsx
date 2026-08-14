@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { cn } from '@/lib/utils';
 import { Portal } from './Portal';
+import { useOverlayOpen } from '@/lib/overlaySignal';
 import { useAnchoredPosition, useDismiss, type Align } from './floating';
 
 /** Click-triggered floating panel.
@@ -24,6 +25,7 @@ export function Popover({
   align = 'start',
   className,
   onOpenChange,
+  registerOverlay = true,
 }: {
   trigger: ReactElement;
   children: ReactNode | ((close: () => void) => ReactNode);
@@ -31,10 +33,18 @@ export function Popover({
   className?: string;
   /** Notified whenever the panel opens/closes (e.g. to freeze a parent menu). */
   onOpenChange?: (open: boolean) => void;
+  /**
+   * Whether to register with the global overlay-open signal (hides the editor's
+   * block side menu while open — §6.1). Defaults to true; the side menu's own
+   * convert popover sets this false so its handle stays visible.
+   */
+  registerOverlay?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLSpanElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+
+  useOverlayOpen(open, registerOverlay);
 
   const firstRun = useRef(true);
   useEffect(() => {

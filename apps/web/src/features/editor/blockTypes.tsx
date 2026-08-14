@@ -65,6 +65,40 @@ import {
 import { format } from 'date-fns';
 import { api } from '@/lib/api';
 import { HEADING_LABELS, HEADING_LEVELS } from './headingScale';
+import { weftCustomBlockSpecs } from './blocks';
+
+/**
+ * Land the caret at the end of a just-inserted block's inline content, after its
+ * node view has committed to the DOM.
+ *
+ * WHY THIS EXISTS — the "text jumps to the next line" bug for Toggle / Highlight
+ * (callout) / Quote. Those are *custom React* blocks: their editable element
+ * (`contentDOM`) is mounted asynchronously by TipTap's React node-view renderer,
+ * one commit *after* the ProseMirror node is created. `insertOrUpdateBlock`
+ * places the text cursor synchronously, so for a custom block that runs *before*
+ * the editable exists; the slash-menu popover also holds DOM focus at that moment.
+ * The model selection is therefore discarded when focus returns to the editor,
+ * and the first keystroke falls to the next line/block. Built-in blocks
+ * (paragraph, bullet/numbered/checklist, heading) build their `contentDOM`
+ * synchronously in `renderHTML`, so they never hit this and must not be touched.
+ *
+ * The fix re-asserts the caret on the next animation frame — once the React node
+ * view has mounted its editable — and hands focus back to the editor, mirroring
+ * the "+" convert path (Editor.tsx `handleBlockConvert`). This is the genuine
+ * sequencing fix for async-mounted node views, applied once at the shared insert
+ * source, not a per-block focus hack.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function focusInsertedInlineBlock(editor: any, blockId: string): void {
+  requestAnimationFrame(() => {
+    try {
+      editor.focus();
+      editor.setTextCursorPosition(blockId, 'end');
+    } catch {
+      /* block was removed or isn't a text block before the frame ran */
+    }
+  });
+}
 
 /**
  * Single source of truth for the editor's block-type set.
@@ -489,11 +523,19 @@ export async function insertBlockType(def: BlockTypeDef, ctx: BlockTypeCtx): Pro
       return;
     }
     case 'simple': {
-      insertOrUpdateBlock(editor, {
+      const newBlock = insertOrUpdateBlock(editor, {
         type: def.spec.type,
         ...(def.spec.props ? { props: def.spec.props } : {}),
         ...(def.spec.content ? { content: def.spec.content } : {}),
       } as never);
+      // Custom React blocks that hold inline content (toggle, callout, quote, …)
+      // mount their editable a frame late; re-assert the caret so the first
+      // keystroke lands inline. Scoped to Weft's custom inline blocks — built-in
+      // blocks already place the caret correctly and are left untouched.
+      const content = editor.schema.blockSchema[def.spec.type]?.content;
+      if (content === 'inline' && def.spec.type in weftCustomBlockSpecs) {
+        focusInsertedInlineBlock(editor, newBlock.id);
+      }
       return;
     }
     case 'file': {

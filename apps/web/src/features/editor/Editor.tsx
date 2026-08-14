@@ -159,6 +159,74 @@ export function Editor({
     };
   }, [editor]);
 
+  // Column drop-zone affordances. While a block is dragged, light up every column
+  // as a drop zone (`.wf-dnd-active` on the PM root) and mark the column under the
+  // pointer as the active target — or invalid, when a whole `columnList` is being
+  // dragged (it can't nest inside a column). Pure editor UI: only CSS-hook classes
+  // are toggled, nothing is written to the document. See editor.css.
+  useEffect(() => {
+    if (!editable) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const tt = (editor as any)._tiptapEditor;
+    const root: HTMLElement | undefined = tt?.view?.dom;
+    if (!root) return;
+
+    let sourceChecked = false;
+    let invalidSource = false;
+
+    // The dragged block is reflected in the PM selection (BlockNote sets it on
+    // dragstart). A whole columnList can't be nested inside a column.
+    const isColumnListDrag = (): boolean => {
+      try {
+        const sel = tt.view.state.selection;
+        const node = sel.node ?? sel.$from?.nodeAfter ?? null;
+        return node?.type?.name === 'columnList';
+      } catch {
+        return false;
+      }
+    };
+
+    const clearTargets = () => {
+      root
+        .querySelectorAll('.wf-drop-target, .wf-drop-invalid')
+        .forEach((el) => el.classList.remove('wf-drop-target', 'wf-drop-invalid'));
+    };
+
+    const onDragOver = (e: DragEvent) => {
+      root.classList.add('wf-dnd-active');
+      if (!sourceChecked) {
+        invalidSource = isColumnListDrag();
+        sourceChecked = true;
+      }
+      const col = (e.target as HTMLElement | null)?.closest?.('.bn-block-column') as
+        | HTMLElement
+        | null;
+      const cls = invalidSource ? 'wf-drop-invalid' : 'wf-drop-target';
+      if (col?.classList.contains(cls)) return; // already marked (re-added if reconciled)
+      clearTargets();
+      if (col) col.classList.add(cls);
+    };
+
+    const onDragCleanup = () => {
+      root.classList.remove('wf-dnd-active');
+      clearTargets();
+      sourceChecked = false;
+      invalidSource = false;
+    };
+
+    // dragover fires over the editor content; end/drop go on document so a drag
+    // that ends outside the editor (or is cancelled) still clears the state.
+    root.addEventListener('dragover', onDragOver);
+    document.addEventListener('dragend', onDragCleanup);
+    document.addEventListener('drop', onDragCleanup);
+    return () => {
+      root.removeEventListener('dragover', onDragOver);
+      document.removeEventListener('dragend', onDragCleanup);
+      document.removeEventListener('drop', onDragCleanup);
+      onDragCleanup();
+    };
+  }, [editor, editable]);
+
   // `@` menu: insert a page-mention inline chip that the server turns into a backlink.
   const getMentionItems = (query: string): DefaultReactSuggestionItem[] =>
     (tree ?? [])

@@ -230,3 +230,116 @@
 .bn-block:has(> .react-renderer > .bn-block-content > .wf-toggle[data-open='false']) > .bn-block-group {
   display: none;
 }
+
+/* ── Multi-column containers: make each column a legible drop zone ──────────────
+ *
+ * The official `@blocknote/xl-multi-column` (mention.tsx `withMultiColumn`) renders
+ * a `columnList` as `.bn-block-column-list` (a flex row) holding N `.bn-block-column`
+ * children. Out of the box a column is just `flex:1` padding — empty columns are
+ * invisible, so the user can't tell where the drop zones are. We give each column a
+ * subtle border + an empty-state hint.
+ *
+ * CRITICAL: every rule here is scoped to `.bn-editor[contenteditable='true']`, i.e.
+ * the EDIT mode only. Read-only preview / presentation use the same <Editor> with
+ * `editable={false}` (contenteditable='false'), and PDF/HTML export builds its own
+ * markup (features/export/exporters.ts) — so none of these affordances (borders,
+ * "Column N", "Drop here") ever leak into output. They are pure editor UI and are
+ * never real document blocks, so they can't be saved either. */
+
+/* Column boundaries — visible even when filled, so structure stays readable. */
+.weft-page-content .bn-editor[contenteditable='true'] .bn-block-column-list {
+  gap: 12px;
+  counter-reset: wf-col;
+}
+.weft-page-content .bn-editor[contenteditable='true'] .bn-block-column {
+  counter-increment: wf-col;
+  position: relative;
+  min-height: 3.75rem;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px; /* rounded-sm */
+  transition: border-color 0.12s ease, background-color 0.12s ease;
+}
+/* Core zeroes first/last column padding; keep it even so the borders line up. */
+.weft-page-content .bn-editor[contenteditable='true'] .bn-block-column:first-child {
+  padding-left: 12px;
+}
+.weft-page-content .bn-editor[contenteditable='true'] .bn-block-column:last-child {
+  padding-right: 12px;
+}
+
+/* A column counts as EMPTY when it holds exactly one top-level block and that block
+ * is an empty paragraph — BlockNote marks empty inline content with a lone
+ * `.ProseMirror-trailingBreak` (same signal its own placeholder plugin keys off).
+ * Type or drop anything in and this stops matching, so the hint disappears on its
+ * own without ever becoming content. */
+.weft-page-content
+  .bn-editor[contenteditable='true']
+  .bn-block-column:has(
+    > .bn-block-group
+      > .bn-block-outer:only-child
+      > .bn-block
+      > .bn-block-content
+      > .bn-inline-content:has(> .ProseMirror-trailingBreak:only-child)
+  ) {
+  background: color-mix(in srgb, var(--sunk) 55%, transparent);
+}
+.weft-page-content
+  .bn-editor[contenteditable='true']
+  .bn-block-column:has(
+    > .bn-block-group
+      > .bn-block-outer:only-child
+      > .bn-block
+      > .bn-block-content
+      > .bn-inline-content:has(> .ProseMirror-trailingBreak:only-child)
+  )::after {
+  content: 'Column ' counter(wf-col) '\A Drop content here';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  white-space: pre-line;
+  text-align: center;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-faint);
+  pointer-events: none; /* clicks fall through to the paragraph → caret still lands */
+  user-select: none;
+}
+
+/* ── Drag state ────────────────────────────────────────────────────────────────
+ * `.wf-dnd-active` is toggled on the ProseMirror root by a drag listener in
+ * Editor.tsx while a block is being dragged; `.wf-drop-target` / `.wf-drop-invalid`
+ * mark the column currently under the pointer. All class-only, nothing persisted. */
+
+/* While dragging, every column advertises itself as a drop zone. */
+.weft-page-content .bn-editor[contenteditable='true'].wf-dnd-active .bn-block-column {
+  border-color: color-mix(in srgb, var(--thread) 40%, var(--line));
+  background: color-mix(in srgb, var(--thread-soft) 40%, transparent);
+}
+/* The column under the pointer — the active, valid target. */
+.weft-page-content .bn-editor[contenteditable='true'].wf-dnd-active .bn-block-column.wf-drop-target {
+  border-color: var(--thread);
+  background: var(--thread-soft);
+  box-shadow: inset 0 0 0 1px var(--thread);
+}
+/* A target that can't accept the dragged block (e.g. a columnList — can't nest). */
+.weft-page-content .bn-editor[contenteditable='true'].wf-dnd-active .bn-block-column.wf-drop-invalid {
+  border-style: dashed;
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger-soft) 55%, transparent);
+  cursor: no-drop;
+}
+/* Tint the empty-column hint to match the target/invalid state. Colour-only, so it
+ * has no effect on filled columns (which render no ::after). */
+.weft-page-content .bn-editor[contenteditable='true'].wf-dnd-active .bn-block-column.wf-drop-target::after {
+  color: var(--thread);
+  font-weight: 600;
+}
+.weft-page-content .bn-editor[contenteditable='true'].wf-dnd-active .bn-block-column.wf-drop-invalid::after {
+  color: var(--danger);
+  font-weight: 600;
+}

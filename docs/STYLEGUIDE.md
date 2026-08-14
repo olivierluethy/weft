@@ -260,6 +260,24 @@ Focus ring: `0 0 0 2px var(--paper), 0 0 0 4px var(--thread)` (2px offset halo).
   vertical guide per indent level, brightening to `--thread` at 40% when the nested
   subtree is hovered. Every block indents with **Tab** / drag-right and outdents with
   **Shift+Tab** / drag-left, for normal blocks and list items alike.
+- **Column containers (edit-mode only):** a multi-column layout (`columnList`) draws each
+  column as a distinct drop zone *while editing*, so the user can see where each column is
+  and what can be dropped where. These affordances are pure editor UI — they are scoped to
+  `.bn-editor[contenteditable='true']` and therefore never appear in read-only preview,
+  presentation, or export (PDF/HTML), and are never stored as document content.
+  - **Resting:** a 1px `--line` inset border, `rounded-sm`, with a hairline column-gap so the
+    boundaries read even when columns are filled. Filled columns keep the border; empty ones
+    add a faint `--sunk` wash.
+  - **Empty column:** shows a centred, non-selectable hint — a small `--ink-faint` "Column N"
+    label (auto-numbered via CSS counter) over a `--ink-faint` "Drop content here" line. The
+    hint is a CSS pseudo-element on the empty column, so it disappears the moment any block is
+    typed or dropped in and is never part of the saved document.
+  - **Dragging:** while a block is being dragged, all columns brighten to signal they are drop
+    zones (border → `--thread` at 40%, faint `--thread-soft` wash). The column under the
+    pointer becomes the active target (solid `--thread` border + `--thread-soft` fill, hint
+    reads "Drop here"). A column that cannot accept the dragged block (e.g. a `columnList`,
+    which can't nest) shows the invalid state instead (`--danger` dashed border, "Can't drop
+    here"), so the user knows before releasing.
 - **Cover texture:** page covers without an image fall back to a faint diagonal weave
   pattern generated from `--sunk`/`--line`.
 - **Loading/logo:** threads animate in and interlace (respects `prefers-reduced-motion`).

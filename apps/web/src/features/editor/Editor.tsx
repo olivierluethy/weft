@@ -4,7 +4,6 @@ import { HocuspocusProvider } from '@hocuspocus/provider';
 import {
   useCreateBlockNote,
   SuggestionMenuController,
-  FormattingToolbarController,
   SideMenuController,
   type DefaultReactSuggestionItem,
 } from '@blocknote/react';
@@ -41,7 +40,7 @@ import { SlashMenu } from './SlashMenu';
 import { MarqueeSelect } from './MarqueeSelect';
 import { CodeLanguagePicker } from './CodeLanguagePicker';
 import { CodeCopyButton } from './CodeCopyButton';
-import { WeftFormattingToolbar } from './FormattingToolbar';
+import { SelectionToolbar } from './SelectionToolbar';
 import { EmptyState, isBlocksEmpty } from './EmptyState';
 import { extractHeadings, type OutlineHeading } from './outline';
 import { parseFileToBlocks } from '@/features/export/importContent';
@@ -637,6 +636,11 @@ export function Editor({
 
   return (
     <>
+    {/* Selection toolbar (docs/STYLEGUIDE.md §6.8). Rendered beside the editor,
+     * not inside <BlockNoteView>, because it portals itself and reads the editor
+     * directly — it needs no BlockNote React context and stays out of the
+     * library's own UI tree. */}
+    {editable && <SelectionToolbar editor={editor} ctx={blockCtx} tree={tree ?? []} />}
     {editable && <MarqueeSelect editor={editor} />}
     {editable && <CodeLanguagePicker editor={editor} />}
     {editable && <CodeCopyButton editor={editor} />}
@@ -654,10 +658,6 @@ export function Editor({
       formattingToolbar={false}
       sideMenu={false}
     >
-      {/* Formatting toolbar: BlockNote defaults + the per-selection font-family
-       * picker (docs/STYLEGUIDE.md §3.4). */}
-      <FormattingToolbarController formattingToolbar={WeftFormattingToolbar} />
-
       {/* Side menu: the "+" converts the current block's type (no blank-line
        * insertion) and the handles are vertically centered (placement "left"). */}
       <SideMenuController sideMenu={renderSideMenu} floatingOptions={{ placement: 'left' }} />

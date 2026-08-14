@@ -218,17 +218,110 @@
   font-family: var(--wf-title-font);
 }
 
-/* Inline font-family trigger in the formatting toolbar (§3.4). It rides inside
- * BlockNote's own toolbar Button, so all it needs is the internal layout — the
- * chrome comes from Mantine and stays in step with the heading switch. */
-.wf-inline-font-trigger {
+/* ── Selection toolbar (STYLEGUIDE §6.8) ───────────────────────────────────
+   One floating rail, portalled to <body>. Written here rather than in Tailwind
+   utilities because it is a small, self-contained component whose parts
+   (button, select, divider, state bar) are referenced from several places and
+   read better as one block. Colours are the same semantic tokens. */
+.wf-selection-rail {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 6px 20px rgba(33, 31, 28, 0.1);
+  /* A rail that grew a scrollbar would be worse than one that re-homes its
+     controls, so it never wraps — the tiers in SelectionToolbar.tsx move
+     controls into the More menu instead. */
+  white-space: nowrap;
+  animation: wf-rail-in 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes wf-rail-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.wf-rail-button,
+.wf-rail-select {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  white-space: nowrap;
+  justify-content: center;
+  height: 28px;
+  border-radius: 6px;
+  color: var(--ink-muted);
+  background: transparent;
+  transition:
+    background-color 0.12s cubic-bezier(0.2, 0.6, 0.2, 1),
+    color 0.12s cubic-bezier(0.2, 0.6, 0.2, 1);
 }
-.wf-inline-font-trigger > svg:last-child {
-  opacity: 0.6;
+.wf-rail-button {
+  width: 28px;
+  /* The state bar hangs below the glyph, so the icon rides 1px high. */
+  padding-bottom: 2px;
+}
+.wf-rail-select {
+  gap: 4px;
+  max-width: 168px;
+  padding: 0 6px;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.wf-rail-button:hover,
+.wf-rail-select:hover {
+  background: var(--sunk);
+  color: var(--ink);
+}
+.wf-rail-button[data-state='on'] {
+  background: var(--thread-soft);
+  color: var(--thread);
+}
+.wf-rail-button[data-state='mixed'] {
+  color: var(--thread);
+}
+.wf-rail-button:focus-visible,
+.wf-rail-select:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--thread);
+}
+
+/* on / mixed indicator: solid means the whole selection carries the mark,
+   dashed means only part of it does (§18). */
+.wf-rail-state {
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 14px;
+  height: 2px;
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+.wf-rail-divider {
+  width: 1px;
+  height: 18px;
+  margin: 0 3px;
+  background: var(--line);
+  flex: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wf-selection-rail {
+    animation: none;
+  }
 }
 
 /* Collaboration carets. */

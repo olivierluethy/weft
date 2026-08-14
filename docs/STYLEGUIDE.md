@@ -353,6 +353,7 @@ where a single, documented z-scale decides order:
 | `z-sidebar`            | 40          | mobile sidebar drawer                                    |
 | `z-peek`               | 60          | docked side-peek panel + its scrim                      |
 | _(reserved)_           | 2000–4000   | **BlockNote in-editor floating UI** — see note below    |
+| `z-selection-toolbar`  | 4500        | the text-selection rail (§6.8) — content-level chrome   |
 | `z-scrim`              | 5000        | modals, dialogs, full-screen panels (portalled)         |
 | `z-overlay`            | 6000        | menus, popovers, dropdowns, context menus (portalled)   |
 | `z-tooltip`            | 6100        | tooltips (portalled)                                     |
@@ -660,6 +661,85 @@ Composition, top to bottom:
 
 Keyboard: `/` or typing focuses search, `↑`/`↓` move through visible rows, `Enter`
 activates, `←`/`Escape` steps out of a sub-view before Escape closes the panel.
+
+### 6.8 Selection toolbar — one surface for two questions
+
+Selecting text raises two questions at once, and they are usually built as two
+products: **what kind of block is this?** and **how is this text set?** Weft answers
+both on one surface (`features/editor/SelectionToolbar.tsx`), because the writer
+does not experience them as separate — they highlight a line and want it to become
+a heading, or bold, and should not have to know which of those is a structural
+change.
+
+**A rail, and one panel behind every control.**
+
+| Part                                                 | Job                                                                     |
+| ---------------------------------------------------- | ----------------------------------------------------------------------- |
+| **Block type** (`Heading 1 ▾`)                        | the only *labelled* control — its current value must be read, not recognised |
+| **B I U S `<>`**                                      | the five boolean marks, direct, with on / mixed state under the glyph      |
+| **Link · Colour · Font**                              | inline commands that need a panel; each reports its own value              |
+| **More ⋯**                                            | the complete command set, always — nothing the rail drops is unreachable  |
+
+Every one of those controls opens the *same* component (`SelectionCommandMenu`) at a
+different `initialView`, so the colour grid reached from the colour button and the one
+reached by typing "highlight" are the same grid, and a back arrow always leads to the
+full list. Its root is **one searchable list** — Format, Turn into, Actions as
+sections rather than separate menus — powered by `lib/fuzzy.ts` (§6.5), matching
+labels, section names and hand-written aliases: `h1`, `title`, `strong`, `marker`.
+
+**No parallel editor.** The toolbar owns no editing logic. Block transformations call
+the same `convertBlockType` verb over the same `BLOCK_TYPE_DEFS` registry the "/" menu
+and **＋ Add block** are built from (§6.5); Duplicate / Copy link / Move to / Delete call
+the same `blockActions.ts` verbs as the ⠿ menu, and reuse its `MoveToList`; inline
+styles go through the editor's own style schema; colour uses the shared ten-name
+`palette.ts` at both scales — block props from the ⠿ menu, inline marks from here. A
+block type added to the registry therefore appears in both menus, and neither can drift.
+
+**Nothing is offered that cannot be done.** `canConvertSelection` filters the registry
+down to what a text selection can honestly become: `action` entries (mention, emoji,
+date, imports) are not block types; `file` entries would silently discard the words;
+`simple` entries are admitted only when their schema content is `inline`. Page and
+Columns work on one block, so they appear only for a single-block selection. A
+transformation applies to **every** block the selection touches, each keeping its own
+inline runs.
+
+**State is honest, and never colour alone.** BlockNote's `getActiveStyles()` reports
+the marks at the *end* of a selection, which is exactly wrong here — "normal **bold**
+normal" would read as "not bold". `scanSelection` instead measures how many characters
+each mark actually covers, giving a real three-way state: a **solid** bar under the
+glyph means every selected character carries the mark, a **dashed** bar means only some
+do, and value-carrying controls (colour, font) say `Mixed` in words rather than picking
+one at random.
+
+**The selection survives the toolbar.** Two defences, both required. Controls cancel
+their own `mousedown`, so the browser never moves the selection in the first place; and
+every verb runs through `runOnSelection`, which re-asserts a recorded ProseMirror range
+before acting — the case a `preventDefault` cannot cover, where a panel (link form,
+search field) legitimately takes focus. Panels carry `.bn-ui-container`, the one focus
+target BlockNote does not treat as a blur, and closing a panel hands the caret back to
+the text so the state selection and the DOM selection stay in step.
+
+**Clear formatting is not Turn into → Paragraph.** It strips the inline styles read off
+the live style schema and leaves the block type, the structure and any links standing.
+A heading that is cleared is still a heading.
+
+Placement, per §6.1: the rail portals to `<body>` at `z-selection-toolbar` (4500) —
+above BlockNote's reserved 2000–4000 band, below every app overlay — and its panels use
+the shared `Popover` at `z-overlay`, so a panel always sits above the rail that opened
+it. It floats above the selection, flips below when the text is at the top of the
+viewport, and is clamped 8px inside every edge. When the viewport narrows the rail
+**re-homes** controls into More rather than truncating or scrolling — font goes first,
+then link, colour and the last three marks — so Bold, Italic, the block type and More
+are on the rail at every width.
+
+Keyboard. **Tab cannot be the way in** — inside the editor ProseMirror claims Tab for
+indent/outdent, and a portalled rail is never the next tab stop anyway — so **`Alt+F10`**
+focuses it, the long-standing convention for "focus the editor toolbar". From there the rail
+is a real `role="toolbar"`: one tab stop, `←`/`→` (and `Home`/`End`) between controls, `Enter`
+or `Space` to activate, `Escape` back to the text. Inside a panel, `↑`/`↓`/`Home`/`End` move
+through the command list, `Enter` runs the highlighted row, and `Escape` steps out of a
+sub-view before closing. `Mod+B` / `Mod+I` / `Mod+U` and the rest stay BlockNote's own — the
+toolbar reflects them, it does not reimplement them.
 
 ---
 

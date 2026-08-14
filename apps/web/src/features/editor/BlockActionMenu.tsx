@@ -14,6 +14,8 @@ import {
 import { cn } from '@/lib/utils';
 import { fuzzyFilter } from '@/lib/fuzzy';
 import { BlockPicker } from './BlockPicker';
+import { MoveToList } from './MoveToList';
+import { PALETTE } from './palette';
 import type { BlockTypeCtx, BlockTypeDef } from './blockTypes';
 import {
   blockSupportsColor,
@@ -37,20 +39,9 @@ interface ActionDef {
   run?: () => void;
 }
 
-// BlockNote's colour names → a representative swatch. Setting the block's
-// textColor / backgroundColor prop is all BlockNote needs to render the colour.
-const COLORS: { name: string; swatch: string }[] = [
-  { name: 'default', swatch: 'transparent' },
-  { name: 'gray', swatch: '#9b9691' },
-  { name: 'brown', swatch: '#a3835f' },
-  { name: 'red', swatch: '#c4554d' },
-  { name: 'orange', swatch: '#cc772f' },
-  { name: 'yellow', swatch: '#c9a227' },
-  { name: 'green', swatch: '#4f9d69' },
-  { name: 'blue', swatch: '#3f76c4' },
-  { name: 'purple', swatch: '#8a5cc4' },
-  { name: 'pink', swatch: '#c45c93' },
-];
+// Block-level colour uses the same ten names and swatches as the inline
+// (per-selection) colour menu — one palette, two scales (features/editor/palette.ts).
+const COLORS = PALETTE;
 
 function relativeTime(iso?: string): string | null {
   if (!iso) return null;
@@ -192,6 +183,7 @@ export function BlockActionMenu({
       {view === 'turnInto' && (
         <SubShell title="Turn into" onBack={() => setView('root')}>
           <BlockPicker
+            chrome={false}
             activeBlock={block}
             placeholder="Turn into…"
             onPick={(def) => {
@@ -220,7 +212,7 @@ export function BlockActionMenu({
 
       {view === 'moveTo' && (
         <SubShell title="Move to" onBack={() => setView('root')}>
-          <MoveToView
+          <MoveToList
             tree={tree}
             currentPageId={ctx.pageId}
             onPick={(target) => {
@@ -415,62 +407,6 @@ function ColorView({
           Background
         </p>
         <Swatches prop="backgroundColor" current={curBg} />
-      </div>
-    </div>
-  );
-}
-
-/** Move-to sub-view: fuzzy page picker. */
-function MoveToView({
-  tree,
-  currentPageId,
-  onPick,
-}: {
-  tree: { id: string; title: string; icon?: string | null }[];
-  currentPageId: string;
-  onPick: (target: { id: string; title: string }) => void;
-}) {
-  const [query, setQuery] = useState('');
-  const pages = useMemo(
-    () => tree.filter((p) => p.id !== currentPageId),
-    [tree, currentPageId],
-  );
-  const filtered = useMemo(
-    () => fuzzyFilter(pages, query, (p) => p.title || 'Untitled').slice(0, 50),
-    [pages, query],
-  );
-
-  return (
-    <div className="flex max-h-[340px] flex-col">
-      <div className="flex items-center gap-2 border-b border-line px-3 py-2 focus-within:border-thread/30">
-        <Search size={14} className="shrink-0 text-ink-faint" />
-        <input
-          autoFocus
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Move to page…"
-          aria-label="Move to page"
-          className="w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink-faint focus-visible:shadow-none"
-        />
-      </div>
-      <div className="flex-1 overflow-y-auto overscroll-contain p-1">
-        {filtered.length === 0 ? (
-          <p className="px-2 py-6 text-center text-sm text-ink-faint">No pages found.</p>
-        ) : (
-          filtered.map((p) => (
-            <button
-              key={p.id}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                onPick({ id: p.id, title: p.title });
-              }}
-              className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-ink transition hover:bg-sunk"
-            >
-              <span className="shrink-0 text-sm">{p.icon || '📄'}</span>
-              <span className="truncate">{p.title || 'Untitled'}</span>
-            </button>
-          ))
-        )}
       </div>
     </div>
   );

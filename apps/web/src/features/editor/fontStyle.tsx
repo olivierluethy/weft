@@ -11,7 +11,7 @@ export const FONT_STACKS: Record<string, string> = Object.fromEntries(
 /** Inline font-family mark. Stored on the selected text range as
  * `{ styles: { font: '<page font key>' } }`; overrides the page face for the
  * marked characters only. The choices are the whole library — the picker is
- * `FontList`, opened from the formatting toolbar (see FormattingToolbar.tsx);
+ * `FontList`, opened from the selection toolbar (see SelectionToolbar.tsx);
  * there is no separate short list here to fall behind the registry. */
 export const FontStyle = createReactStyleSpec(
   { type: 'font', propSchema: 'string' },

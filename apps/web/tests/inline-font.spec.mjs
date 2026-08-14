@@ -92,10 +92,12 @@ const renderedFont = (word) =>
 try {
 check('formatting toolbar appears on a selection', await toolbarVisible());
 check('inline font trigger is in the toolbar', await page.locator('[data-weft-inline-font]').isVisible());
+// Unmarked text has no face of its own, and the trigger says nothing rather
+// than parking the word "Default" in the rail forever (STYLEGUIDE §6.8).
 check(
-  'trigger shows Default for unmarked text',
-  (await page.locator('[data-weft-inline-font]').innerText()).includes('Default'),
-  await page.locator('[data-weft-inline-font]').innerText(),
+  'trigger names no face for unmarked text',
+  (await page.locator('[data-weft-inline-font]').innerText()).trim() === '',
+  JSON.stringify(await page.locator('[data-weft-inline-font]').innerText()),
 );
 
 await page.locator('[data-weft-inline-font]').click();
@@ -118,6 +120,11 @@ check('inline mark written to the document', (await markOf('Alpha')) === 'poppin
 check('marked run renders in Poppins', /Poppins/i.test((await renderedFont('Alpha')) ?? ''), String(await renderedFont('Alpha')));
 check('picker stays open after a pick', await pickerOpen());
 check('toolbar stays open after a pick', await toolbarVisible());
+check(
+  'the trigger now names the face it applied',
+  (await page.locator('[data-weft-inline-font]').innerText()).includes('Poppins'),
+  await page.locator('[data-weft-inline-font]').innerText(),
+);
 
 // Second pick in a row, no reopening — the same promise as the page-level picker.
 await page.fill('input[aria-label="Search fonts"]', '');

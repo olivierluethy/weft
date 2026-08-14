@@ -9,6 +9,7 @@ import { api, ApiError } from '@/lib/api';
 import { toast } from '@/lib/toast';
 import { Button, IconButton } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 interface TrashPage {
   id: string;
@@ -22,6 +23,7 @@ export default function TrashView() {
   const { workspaceId } = useWorkspace();
   const invalidate = useInvalidate();
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [confirmPage, setConfirmPage] = useState<TrashPage | null>(null);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['trash', workspaceId],
@@ -45,10 +47,7 @@ export default function TrashView() {
   };
 
   const deleteForever = async (page: TrashPage) => {
-    const confirmed = window.confirm(
-      `Permanently delete “${page.title || 'Untitled'}”? This cannot be undone.`,
-    );
-    if (!confirmed) return;
+    setConfirmPage(null);
     setBusyId(page.id);
     try {
       await api.del(`/pages/${page.id}/permanent`);
@@ -119,7 +118,7 @@ export default function TrashView() {
                       size="sm"
                       disabled={busyId !== null}
                       className="text-danger hover:bg-danger-soft hover:text-danger"
-                      onClick={() => deleteForever(page)}
+                      onClick={() => setConfirmPage(page)}
                     >
                       <Trash2 size={14} />
                       Delete forever
@@ -131,6 +130,21 @@ export default function TrashView() {
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={!!confirmPage}
+        danger
+        title="Delete forever?"
+        message={
+          <p>
+            <span className="font-medium text-ink">“{confirmPage?.title || 'Untitled'}”</span> will be
+            permanently deleted. This can't be undone.
+          </p>
+        }
+        confirmLabel="Delete forever"
+        onCancel={() => setConfirmPage(null)}
+        onConfirm={() => confirmPage && void deleteForever(confirmPage)}
+      />
     </div>
   );
 }

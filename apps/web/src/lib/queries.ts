@@ -60,20 +60,27 @@ export function useWorkspaceOverview(workspaceId: string | null) {
   });
 }
 
-/** Activity feed for a window. `month` null → whole year; both null → current
- * month (server default). Keyed by window so navigation caches each view. */
+/** Activity feed for a window. Pass a `year`/`month` calendar selection (month
+ * null → whole year; both null → current month, the server default) OR an
+ * explicit `from`/`to` ISO range (used by date presets that straddle months).
+ * Keyed by the effective window so navigation caches each view. */
 export function useActivity(
   workspaceId: string | null,
-  year: number | null,
-  month: number | null,
+  opts: { year?: number | null; month?: number | null; from?: string; to?: string } = {},
 ) {
+  const { year = null, month = null, from, to } = opts;
   return useQuery({
-    queryKey: ['activity', workspaceId, year, month],
+    queryKey: ['activity', workspaceId, from ?? year, to ?? month],
     enabled: !!workspaceId,
     queryFn: () => {
       const params = new URLSearchParams();
-      if (year != null) params.set('year', String(year));
-      if (month != null) params.set('month', String(month));
+      if (from && to) {
+        params.set('from', from);
+        params.set('to', to);
+      } else {
+        if (year != null) params.set('year', String(year));
+        if (month != null) params.set('month', String(month));
+      }
       const qs = params.toString();
       return api.get<ActivityFeed>(`/workspaces/${workspaceId}/activity${qs ? `?${qs}` : ''}`);
     },

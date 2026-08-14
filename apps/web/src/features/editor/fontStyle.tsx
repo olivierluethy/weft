@@ -8,18 +8,11 @@ export const FONT_STACKS: Record<string, string> = Object.fromEntries(
   PAGE_FONTS.map((f) => [f.key, f.stack]),
 );
 
-/** Choices surfaced in the formatting-toolbar dropdown. `''` = Default (clears
- * the mark, so the text falls back to the page face). */
-export const FONT_CHOICES: { key: string; label: string }[] = [
-  { key: '', label: 'Default' },
-  { key: 'sans', label: 'Sans' },
-  { key: 'serif', label: 'Serif' },
-  { key: 'mono', label: 'Mono' },
-];
-
 /** Inline font-family mark. Stored on the selected text range as
- * `{ styles: { font: 'sans' | 'serif' | 'mono' } }`; overrides the page default
- * for the marked characters only. */
+ * `{ styles: { font: '<page font key>' } }`; overrides the page face for the
+ * marked characters only. The choices are the whole library — the picker is
+ * `FontList`, opened from the formatting toolbar (see FormattingToolbar.tsx);
+ * there is no separate short list here to fall behind the registry. */
 export const FontStyle = createReactStyleSpec(
   { type: 'font', propSchema: 'string' },
   {

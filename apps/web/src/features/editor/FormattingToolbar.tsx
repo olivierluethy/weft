@@ -8,6 +8,7 @@ import {
 import { useState } from 'react';
 import {
   Type,
+  ChevronDown,
   Heading1,
   Heading2,
   Heading3,
@@ -15,8 +16,10 @@ import {
   Heading5,
   Heading6,
 } from 'lucide-react';
-import { FONT_CHOICES } from './fontStyle';
 import { HEADING_LABELS, HEADING_LEVELS, type HeadingLevel } from './headingScale';
+import { Popover } from '@/components/ui/Popover';
+import { FontList } from './FontList';
+import { pageFont } from './pageFonts';
 
 const HEADING_ICON: Record<HeadingLevel, typeof Heading1> = {
   1: Heading1,
@@ -71,7 +74,21 @@ function HeadingSelect() {
 
 /** Per-selection font-family picker for the formatting toolbar. Reads/writes the
  * inline `font` style (docs/STYLEGUIDE.md §3.4): Default clears the mark, the
- * others override the page face for the selected characters only. */
+ * others override the page face for the selected characters only.
+ *
+ * It opens the shared `FontList` in a `Popover` rather than BlockNote's
+ * `Select`, because the library is 21 faces now: a flat Mantine dropdown gives
+ * you no search, no grouping, and no way to see a face before choosing it. Same
+ * component, same search and same specimens as the page-level picker (§6.7) —
+ * only the scale of what it changes differs.
+ *
+ * **Why the toolbar survives this.** BlockNote hides the formatting toolbar when
+ * the editor blurs, and typing in the picker's search field is a blur. Its
+ * `FormattingToolbarView.blurHandler` makes one exception: a `relatedTarget`
+ * matching `.bn-ui-container, .bn-ui-container *`. That class carries no styles
+ * anywhere in BlockNote — it exists purely as this opt-out — so the popover
+ * panel claims it and the toolbar stays put while you audition faces.
+ */
 function FontSelect() {
   const editor = useBlockNoteEditor();
   const Components = useComponentsContext()!;
@@ -88,17 +105,43 @@ function FontSelect() {
     const current = (editor.getActiveStyles() as Record<string, unknown>).font;
     if (typeof current === 'string') editor.removeStyles({ font: current } as never);
     if (key) editor.addStyles({ font: key } as never);
+    // The selection doesn't change, so `useEditorContentOrSelectionChange` may
+    // not re-run — set the tick ourselves so the list marks the new face at once.
+    setActive(key);
   };
 
   return (
-    <Components.FormattingToolbar.Select
-      items={FONT_CHOICES.map((f) => ({
-        text: f.label,
-        icon: <Type size={16} />,
-        isSelected: active === f.key,
-        onClick: () => apply(f.key),
-      }))}
-    />
+    <Popover
+      align="center"
+      registerOverlay={false}
+      className="bn-ui-container"
+      // BlockNote's own toolbar Button, so the trigger is pixel-identical to the
+      // heading switch beside it — no hand-rolled copy of Mantine's styling to
+      // drift out of date.
+      trigger={
+        <Components.FormattingToolbar.Button
+          data-weft-inline-font
+          label="Font"
+          mainTooltip="Font"
+        >
+          <span className="wf-inline-font-trigger">
+            <Type size={16} />
+            <span>{active ? pageFont(active).label : 'Default'}</span>
+            <ChevronDown size={13} />
+          </span>
+        </Components.FormattingToolbar.Button>
+      }
+    >
+      <FontList
+        clearable
+        clearLabel="Default"
+        clearHint="Follow the page font"
+        value={active}
+        editable={editor.isEditable}
+        onPick={apply}
+        className="max-h-[min(420px,60vh)] w-72 rounded-xl border border-line bg-surface shadow-lg"
+      />
+    </Popover>
   );
 }
 

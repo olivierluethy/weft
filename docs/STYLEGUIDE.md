@@ -225,17 +225,23 @@ Display type uses tight tracking (`-0.02em` on titles/H1). Body uses default tra
 Font family is **also** available as an inline mark on a text selection, overriding the
 page default (§3.3) for the marked characters only — the page face stays the document
 default. It is a BlockNote style (`font`, a string value) exposed in the selection
-**formatting toolbar** as a `Type`-icon dropdown: **Default / Sans / Serif / Mono**.
-`Default` clears the mark and the text falls back to the page face. The three faces reuse
-the exact same stacks as §3.3, so an inline `Mono` run reads identically to a `mono` page:
+**formatting toolbar**.
 
-| Value   | Face stack                              |
-| ------- | --------------------------------------- |
-| `sans`  | Inter, system-ui, sans-serif            |
-| `serif` | Newsreader, Georgia, serif              |
-| `mono`  | 'JetBrains Mono', ui-monospace, monospace |
+**The two scales share one library and one picker.** The toolbar control opens the same
+`FontList` as the page options panel, over the same 21 faces from the same registry — so a
+key is never offered at one scale and missing at the other, and an inline *Lora* run reads
+identically to a *Lora* page. It adds exactly one thing the page-level picker has no use
+for: a **Default** row that *clears* the mark, because "no face of its own" is a real state
+for a run of text and never a state for a page. The trigger names the active run's face
+(or `Default`), and picking is live and repeatable — the list stays open, so you can try
+three faces against the surrounding text without reselecting anything.
 
-The dropdown reflects the active run's face; the currently-applied value is checked.
+**The one BlockNote constraint worth knowing.** `FormattingToolbarView.blurHandler` hides
+the toolbar the moment the editor blurs — which typing in the picker's search field is.
+It makes a single exception, for a `relatedTarget` matching `.bn-ui-container, .bn-ui-container *`.
+That class carries **no CSS anywhere in BlockNote**; it exists purely as this opt-out. The
+portalled popover panel therefore claims it. Any future in-editor overlay that needs to
+take focus must do the same, or it will dismiss the toolbar that opened it.
 
 ---
 

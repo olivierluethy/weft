@@ -218,6 +218,19 @@
   font-family: var(--wf-title-font);
 }
 
+/* Inline font-family trigger in the formatting toolbar (§3.4). It rides inside
+ * BlockNote's own toolbar Button, so all it needs is the internal layout — the
+ * chrome comes from Mantine and stays in step with the heading switch. */
+.wf-inline-font-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.wf-inline-font-trigger > svg:last-child {
+  opacity: 0.6;
+}
+
 /* Collaboration carets. */
 .weft-page-content .collaboration-cursor__caret {
   border-color: currentColor;

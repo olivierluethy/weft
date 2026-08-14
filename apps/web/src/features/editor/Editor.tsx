@@ -11,6 +11,7 @@ import {
 import { filterSuggestionItems, locales as coreLocales } from '@blocknote/core';
 import { multiColumnDropCursor, locales as multiColumnLocales } from '@blocknote/xl-multi-column';
 import { createMultilineBlocksPlugin, multilineBlocksPluginKey } from './multilineBlocks';
+import { createEmptyBlockDeletePlugin, emptyBlockDeletePluginKey } from './emptyBlockDelete';
 import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/mantine/style.css';
 import './editor.css';
@@ -153,11 +154,13 @@ export function Editor({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const tt = (editor as any)._tiptapEditor;
     if (!tt) return;
-    const plugin = createMultilineBlocksPlugin(editor);
-    tt.registerPlugin(plugin, (newPlugin: unknown, plugins: unknown[]) => [newPlugin, ...plugins]);
+    const prepend = (newPlugin: unknown, plugins: unknown[]) => [newPlugin, ...plugins];
+    tt.registerPlugin(createMultilineBlocksPlugin(editor), prepend);
+    tt.registerPlugin(createEmptyBlockDeletePlugin(editor), prepend);
     return () => {
       try {
         tt.unregisterPlugin(multilineBlocksPluginKey);
+        tt.unregisterPlugin(emptyBlockDeletePluginKey);
       } catch {
         /* editor already torn down */
       }

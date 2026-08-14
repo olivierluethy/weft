@@ -11,7 +11,9 @@ import { forbidden, notFound } from '../lib/http.js';
 export default async function versionRoutes(app: FastifyInstance) {
   app.addHook('preHandler', app.authenticate);
 
-  // Create a snapshot (auto on debounce/blur, or manual save).
+  // Create a snapshot. Written by the client when the user LEAVES a note they
+  // edited (kind 'blur'), on restore, or via a manual save — never on a typing
+  // timer. The byte-identical dedupe below is a backstop against no-op writes.
   app.post('/versions', async (req) => {
     const body = createVersionSchema.parse(req.body);
     const { role } = await pageWithRole(body.pageId, req.currentUser!.id);

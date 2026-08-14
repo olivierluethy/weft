@@ -199,6 +199,17 @@
   color: var(--ink-faint);
 }
 
+/* Calm empty canvas (§15-16): BlockNote injects a placeholder on ANY empty block
+ * (heading/list types show one whether focused or not). Suppress every block
+ * placeholder while the editor isn't focused, so an unfocused page is a clean
+ * content area; the hint reappears the moment the caret enters the editor. The
+ * paragraph "Enter text or type '/'…" hint is already gated to the focused block
+ * by BlockNote (data-is-empty-and-focused), so this only quiets the rest. */
+.weft-page-content .bn-editor:not(:focus-within)
+  .bn-inline-content:has(> .ProseMirror-trailingBreak:only-child)::before {
+  content: '' !important;
+}
+
 /* Page title follows the page font for the non-default faces (the serif default
  * keeps its Space Grotesk display look untouched). */
 [data-page-font='sans'] .weft-title {

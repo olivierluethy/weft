@@ -396,14 +396,24 @@ inline `@`-mention chip, promoted to block level.
 
 **Empty-page quick actions** — a getting-started affordance on a blank, editable page.
 It is **editor UI, never a document block**: rendered as a `contentEditable=false` sibling
-of the ProseMirror root, so it can't be typed into, saved, exported, or copied, and it
+*after* the ProseMirror root, so it can't be typed into, saved, exported, or copied, and it
 disappears the instant the page gains real content (or the user picks "Text" / starts
-typing). It anchors just below the first line — complementing BlockNote's inline
-placeholder and the "/" menu rather than replacing them. A dezent hint line ("Start
-building — pick a block, press `/` for all, or just type."), then a compact 2/4-column grid
-of ~8 curated cards (`--surface`, `1px --line`, `rounded-md`, icon → `--thread` on hover)
-ordered write → structure → data. Each card runs the **real** insert verb from the shared
-block registry — the same one "/" uses — so it genuinely inserts the block.
+typing). It sits at the **bottom** of the editor area as a quiet quick-start band — a
+hairline `--line` divider, a small "Start building" label + hint ("pick a block, press `/`
+for all, or just type."), then a compact 2/4-column grid of ~8 curated cards (`--surface`,
+`1px --line`, `rounded-md`, icon → `--thread` on hover) ordered write → structure → data —
+so a calm editing area sits above and a fast on-ramp below, rather than a card crowding the
+first line. It aligns to the body text column (`px-[54px]`, matching `.bn-editor`'s
+`padding-inline`). Each card runs the **real** insert verb from the shared block registry —
+the same one "/" uses — so it genuinely inserts the block.
+
+**Content placeholder (calm canvas)** — the inline block placeholders are **focus-gated**.
+BlockNote injects a placeholder on any empty block (the paragraph "Enter text or type `/`…"
+only on the *focused* empty block, but heading/list types on any empty block regardless of
+focus). `editor.css` suppresses every block placeholder while the editor is not focused
+(`.bn-editor:not(:focus-within)`), so an unfocused page shows a clean, empty content area;
+the hint reappears the moment the caret enters the editor. This keeps a new page quiet until
+the writer engages with the body.
 
 **Page header meta row** — a page's cover, icon and tags share **one horizontal row of
 equal-weight ghost pills** above the title (`Add cover · Add icon · Add tag`, `text-xs`

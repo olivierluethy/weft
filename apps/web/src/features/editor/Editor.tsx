@@ -477,9 +477,6 @@ export function Editor({
     {editable && <MarqueeSelect editor={editor} />}
     {editable && <CodeLanguagePicker editor={editor} />}
     <div className="relative">
-    {showEmptyState && (
-      <EmptyState editor={editor} ctx={blockCtx} onDismiss={() => setDismissedEmpty(true)} />
-    )}
     <BlockNoteView
       editor={editor}
       editable={editable}
@@ -522,6 +519,10 @@ export function Editor({
         />
       )}
     </BlockNoteView>
+    {/* Quick-start band at the bottom of the editor area (empty pages only). */}
+    {showEmptyState && (
+      <EmptyState editor={editor} ctx={blockCtx} onDismiss={() => setDismissedEmpty(true)} />
+    )}
     </div>
     </>
   );

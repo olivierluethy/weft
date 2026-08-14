@@ -457,8 +457,19 @@ the anchor or makes the selection jump. Edge auto-scroll: a rAF loop scrolls the
 page container when the pointer sits within 72px of the top/bottom, at a speed
 proportional to how deep it is in the hot-zone; newly revealed blocks fold into
 the selection each tick. Highlights are portalled `fixed` overlays (`--thread`
-tints) — never classes on BlockNote's own DOM. On release, a floating bar
-(Duplicate / Delete / clear) anchors under the selection.
+16% wash + 60% ring — visible over charts/tables/images) — never classes on
+BlockNote's own DOM. On release, a floating bar (Duplicate / Delete / clear)
+anchors under the selection.
+
+**Generic, type-agnostic coverage.** Selection hit-tests every *leaf* content
+block — any `.bn-block[data-id]` that contains no nested block — at any depth.
+This catches all registered block types (paragraph, table, chart, image,
+database, …) without an enumerated per-type list, and reaches blocks **inside
+columns**, not just top-level ones. Bulk delete runs the selected leaves through
+`planDeletion`: a container (column layout) whose every leaf is covered collapses
+to the container id (the whole layout goes), while a partial selection removes
+just the covered leaves and leaves the layout intact. All deletes go through
+`editor.removeBlocks`, so they're captured by the Yjs undo history like any edit.
 
 ---
 

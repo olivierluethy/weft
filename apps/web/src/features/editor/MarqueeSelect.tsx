@@ -15,6 +15,36 @@ function intersects(a: Rect2, b: DOMRect) {
   return !(a.right < b.left || a.left > b.right || a.bottom < b.top || a.top > b.bottom);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Block = { id: string; children?: Block[] } & Record<string, any>;
+
+/** Leaf block ids under a block (itself if it has no children). */
+function leafIds(block: Block): string[] {
+  if (block.children && block.children.length) return block.children.flatMap(leafIds);
+  return [block.id];
+}
+
+/**
+ * Turn a flat set of selected LEAF ids into the minimal set of blocks to remove.
+ * A container (e.g. a column layout) whose every leaf is selected collapses to
+ * the container id — so deleting a fully-covered columns block removes the whole
+ * layout, while a partial selection deletes just the covered leaves and leaves
+ * the layout intact. Recurses so nested containers are handled at every depth.
+ */
+function planDeletion(blocks: Block[], selected: Set<string>): string[] {
+  const out: string[] = [];
+  for (const b of blocks) {
+    if (b.children && b.children.length) {
+      const leaves = leafIds(b);
+      if (leaves.length && leaves.every((id) => selected.has(id))) out.push(b.id);
+      else out.push(...planDeletion(b.children, selected));
+    } else if (selected.has(b.id)) {
+      out.push(b.id);
+    }
+  }
+  return out;
+}
+
 /**
  * Photoshop-style rubber-band selection of editor blocks, with edge auto-scroll
  * so a selection can extend far past the visible viewport on a long page.
@@ -55,12 +85,20 @@ export function MarqueeSelect({ editor }: { editor: AnyEditor }) {
     const container = (root?.closest('[data-page-scroll]') ?? root) as HTMLElement | null;
     if (!container) return;
 
-    const topLevelBlocks = (): HTMLElement[] => {
-      const group = container.querySelector('.bn-editor > .bn-block-group');
-      if (!group) return [];
-      return [...group.children]
-        .map((outer) => outer.querySelector(':scope > .bn-block[data-id]') as HTMLElement | null)
-        .filter((el): el is HTMLElement => !!el);
+    // Every *leaf* content block, at any nesting depth. A block is selectable
+    // when it holds no nested block of its own — so real content (paragraph,
+    // heading, table, chart, image, database, …) is included whether it sits at
+    // the top level or inside a column, while structural wrappers (columnList /
+    // column) are skipped in favour of the blocks they contain. This is what
+    // makes the marquee generic: any block registered in the schema is caught,
+    // not an enumerated list of types.
+    const selectableBlocks = (): HTMLElement[] => {
+      const editorEl = container.querySelector('.bn-editor');
+      if (!editorEl) return [];
+      return [...editorEl.querySelectorAll('.bn-block[data-id]')].filter(
+        (el): el is HTMLElement =>
+          el instanceof HTMLElement && !el.querySelector('.bn-block[data-id]'),
+      );
     };
 
     const clearSelection = () => {
@@ -90,7 +128,7 @@ export function MarqueeSelect({ editor }: { editor: AnyEditor }) {
       setMarquee({ left: m.left, top: m.top, width: m.right - m.left, height: m.bottom - m.top });
       const ids: string[] = [];
       const boxes: Box[] = [];
-      for (const el of topLevelBlocks()) {
+      for (const el of selectableBlocks()) {
         const r = el.getBoundingClientRect();
         if (intersects(m, r)) {
           const id = el.getAttribute('data-id');
@@ -189,7 +227,8 @@ export function MarqueeSelect({ editor }: { editor: AnyEditor }) {
         e.preventDefault();
         e.stopPropagation();
         try {
-          editor.removeBlocks(selectedIds.current);
+          const ids = planDeletion(editor.document as Block[], new Set(selectedIds.current));
+          if (ids.length) editor.removeBlocks(ids);
         } catch { /* no-op */ }
         clearSelection();
       } else if (e.key === 'Escape') {
@@ -201,7 +240,7 @@ export function MarqueeSelect({ editor }: { editor: AnyEditor }) {
       // During an active drag `recompute` owns the highlights (and reads the live
       // scroll offset); skip here to avoid double work / flicker.
       if (drag.current?.active || !selectedIds.current.length) return;
-      const byId = new Map(topLevelBlocks().map((el) => [el.getAttribute('data-id'), el]));
+      const byId = new Map(selectableBlocks().map((el) => [el.getAttribute('data-id'), el]));
       const boxes: Box[] = [];
       for (const id of selectedIds.current) {
         const el = byId.get(id);
@@ -248,7 +287,8 @@ export function MarqueeSelect({ editor }: { editor: AnyEditor }) {
 
   const remove = () => {
     try {
-      editor.removeBlocks(selectedIds.current);
+      const ids = planDeletion(editor.document as Block[], new Set(selectedIds.current));
+      if (ids.length) editor.removeBlocks(ids);
     } catch { /* no-op */ }
     clear();
   };
@@ -279,8 +319,11 @@ export function MarqueeSelect({ editor }: { editor: AnyEditor }) {
             top: h.top,
             width: h.width,
             height: h.height,
-            background: 'color-mix(in srgb, var(--thread) 14%, transparent)',
-            boxShadow: '0 0 0 2px color-mix(in srgb, var(--thread) 30%, transparent)',
+            // Visible over any block — including charts / tables / images that
+            // carry their own busy backgrounds: a clear thread ring plus a light
+            // wash, never so faint it disappears on complex content.
+            background: 'color-mix(in srgb, var(--thread) 16%, transparent)',
+            boxShadow: '0 0 0 2px color-mix(in srgb, var(--thread) 60%, transparent)',
           }}
         />
       ))}

@@ -79,6 +79,8 @@ const config: Config = {
         sidebar: '40', // mobile sidebar drawer
         peek: '60', // docked side-peek panel + its scrim
         // — reserved 2000–4000: BlockNote editor floating UI (see note above) —
+        'selection-toolbar': '4500', // the text-selection rail: above the editor's
+        // own affordances, below every app overlay (its panels are z-overlay)
         scrim: '5000', // modals, dialogs, full-screen panels (portalled)
         overlay: '6000', // menus, popovers, dropdowns, context menus (portalled)
         tooltip: '6100', // tooltips (portalled)

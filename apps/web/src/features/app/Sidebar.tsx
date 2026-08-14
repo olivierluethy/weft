@@ -29,7 +29,7 @@ import { Menu } from '@/components/ui/Menu';
 import { Popover } from '@/components/ui/Popover';
 import { TemplatePicker } from './TemplatePicker';
 import { useCreatePage } from './useCreatePage';
-import { PageTree } from './PageTree';
+import { PagesSection } from './PagesSection';
 import { toast } from '@/lib/toast';
 import { useState } from 'react';
 
@@ -195,10 +195,7 @@ export function Sidebar({
           </div>
         )}
 
-        <p className="px-2 pb-1 pt-2 text-2xs font-semibold uppercase tracking-wide text-ink-faint">
-          Pages
-        </p>
-        <PageTree nodes={tree ?? []} />
+        <PagesSection nodes={tree ?? []} />
       </div>
 
       {/* Footer nav */}

@@ -15,7 +15,17 @@ interface TreeItem extends PageTreeNode {
   depth: number;
 }
 
-function buildTree(flat: PageTreeNode[]): TreeItem[] {
+/** How the tree is ordered. `manual` honours the stored position (and enables
+ * drag-to-reorder); the others are read-only orderings. */
+export type SortMode = 'manual' | 'title' | 'edited';
+
+const COMPARATORS: Record<SortMode, (a: PageTreeNode, b: PageTreeNode) => number> = {
+  manual: (a, b) => a.position - b.position,
+  title: (a, b) => (a.title || 'Untitled').localeCompare(b.title || 'Untitled'),
+  edited: (a, b) => b.updatedAt.localeCompare(a.updatedAt),
+};
+
+function buildTree(flat: PageTreeNode[], sort: SortMode): TreeItem[] {
   const byId = new Map<string, TreeItem>();
   flat.forEach((n) => byId.set(n.id, { ...n, children: [], depth: 0 }));
   const roots: TreeItem[] = [];
@@ -26,8 +36,9 @@ function buildTree(flat: PageTreeNode[]): TreeItem[] {
       roots.push(node);
     }
   }
+  const cmp = COMPARATORS[sort];
   const sortRec = (items: TreeItem[], depth: number) => {
-    items.sort((a, b) => a.position - b.position);
+    items.sort(cmp);
     items.forEach((i) => {
       i.depth = depth;
       sortRec(i.children, depth + 1);
@@ -39,8 +50,20 @@ function buildTree(flat: PageTreeNode[]): TreeItem[] {
 
 type DropPos = 'before' | 'after' | 'inside';
 
-export function PageTree({ nodes, filter }: { nodes: PageTreeNode[]; filter?: (n: PageTreeNode) => boolean }) {
-  const tree = useMemo(() => buildTree(filter ? nodes.filter(filter) : nodes), [nodes, filter]);
+export function PageTree({
+  nodes,
+  filter,
+  sortMode = 'manual',
+}: {
+  nodes: PageTreeNode[];
+  filter?: (n: PageTreeNode) => boolean;
+  sortMode?: SortMode;
+}) {
+  const tree = useMemo(
+    () => buildTree(filter ? nodes.filter(filter) : nodes, sortMode),
+    [nodes, filter, sortMode],
+  );
+  const canReorder = sortMode === 'manual';
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
   const [dragId, setDragId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<{ id: string; pos: DropPos } | null>(null);
@@ -112,17 +135,21 @@ export function PageTree({ nodes, filter }: { nodes: PageTreeNode[]; filter?: (n
     return (
       <div key={item.id}>
         <div
-          draggable
-          onDragStart={() => setDragId(item.id)}
-          onDragEnd={reset}
-          onDragOver={(e) => {
-            e.preventDefault();
-            const r = e.currentTarget.getBoundingClientRect();
-            const y = (e.clientY - r.top) / r.height;
-            const pos: DropPos = y < 0.28 ? 'before' : y > 0.72 ? 'after' : 'inside';
-            setDropTarget({ id: item.id, pos });
-          }}
-          onDrop={() => onDrop(item)}
+          draggable={canReorder}
+          onDragStart={canReorder ? () => setDragId(item.id) : undefined}
+          onDragEnd={canReorder ? reset : undefined}
+          onDragOver={
+            canReorder
+              ? (e) => {
+                  e.preventDefault();
+                  const r = e.currentTarget.getBoundingClientRect();
+                  const y = (e.clientY - r.top) / r.height;
+                  const pos: DropPos = y < 0.28 ? 'before' : y > 0.72 ? 'after' : 'inside';
+                  setDropTarget({ id: item.id, pos });
+                }
+              : undefined
+          }
+          onDrop={canReorder ? () => onDrop(item) : undefined}
           onClick={() => navigate(`/p/${item.id}`)}
           onMouseEnter={() => setHoverSubtree(item.id)}
           onMouseLeave={() => setHoverSubtree(null)}

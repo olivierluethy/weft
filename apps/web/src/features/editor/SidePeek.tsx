@@ -9,6 +9,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { PageIcon } from './pickers/IconPicker';
 import { coverImageStyle } from './cover';
 import { toHtml } from '@/features/export/exporters';
+import { DEFAULT_PAGE_FONT, pageFontVars } from './pageFonts';
 
 /** A docked, read-only preview of a page shown beside the current one, so the
  * user can glance at another page without losing their place. Non-modal on
@@ -90,7 +91,8 @@ export function SidePeek({ pageId, onClose }: { pageId: string; onClose: () => v
 
         <div
           className="min-h-0 flex-1 overflow-y-auto"
-          data-page-font={page?.fontFamily ?? 'serif'}
+          data-page-font={page?.fontFamily ?? DEFAULT_PAGE_FONT}
+          style={pageFontVars(page?.fontFamily)}
         >
           {isLoading || !page ? (
             <div className="flex h-full items-center justify-center">

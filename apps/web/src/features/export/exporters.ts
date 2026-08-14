@@ -3,24 +3,19 @@
  * without a live editor instance. */
 
 import { headingScaleExportCss } from '../editor/headingScale';
+import { pageFont } from '../editor/pageFonts';
 
 type Inline = any;
 type Block = any;
-export type PageFont = 'serif' | 'sans' | 'mono';
+/** Any key from the page font library (docs/STYLEGUIDE.md §3.3). */
+export type PageFont = string;
 
-// Font stacks mirror the in-app page fonts (docs/STYLEGUIDE.md §3.3).
-// Headings share the page face and are distinguished by size/weight, matching
-// how the live editor renders them.
-const BODY_FONT: Record<PageFont, string> = {
-  serif: "Georgia, 'Newsreader', serif",
-  sans: "Inter, system-ui, sans-serif",
-  mono: "'JetBrains Mono', ui-monospace, monospace",
-};
-const DOCX_FONT: Record<PageFont, string> = {
-  serif: 'Georgia',
-  sans: 'Calibri',
-  mono: 'JetBrains Mono',
-};
+// Faces come from the one registry (features/editor/pageFonts.ts) rather than a
+// second table here — that duplicate was how the exporters kept only the
+// original three faces while the picker grew. Headings share the page face and
+// are distinguished by size/weight, matching how the live editor renders them.
+const BODY_FONT = (font: PageFont) => pageFont(font).stack;
+const DOCX_FONT = (font: PageFont) => pageFont(font).docx;
 
 // ── Inline rendering ─────────────────────────────────────────────────────
 function inlineMd(nodes: Inline[]): string {
@@ -119,6 +114,47 @@ function tableToMarkdown(block: Block): string {
   return [head, sep, ...body].join('\n');
 }
 
+// ── Plain text ───────────────────────────────────────────────────────────
+/** The document as prose with no markup at all — for pasting somewhere that
+ * would show `**bold**` literally. Structure survives as indentation and list
+ * bullets (a plain-text file has nothing else to say it with). */
+export function toPlainText(blocks: Block[], depth = 0): string {
+  if (!Array.isArray(blocks)) return '';
+  const pad = '  '.repeat(depth);
+  const lines: string[] = [];
+  for (const b of blocks) {
+    const text = inlineText(b.content);
+    switch (b.type) {
+      case 'bulletListItem':
+        lines.push(`${pad}• ${text}`);
+        break;
+      case 'numberedListItem':
+        lines.push(`${pad}- ${text}`);
+        break;
+      case 'checkListItem':
+        lines.push(`${pad}[${b.props?.checked ? 'x' : ' '}] ${text}`);
+        break;
+      case 'divider':
+        lines.push(`${pad}────────`);
+        break;
+      case 'image':
+        lines.push(`${pad}${b.props?.caption || b.props?.url || '[image]'}`);
+        break;
+      case 'pageLink':
+        lines.push(`${pad}${b.props?.title || 'Sub-page'}`);
+        break;
+      case 'table':
+        for (const r of (b.content?.rows ?? []) as any[])
+          lines.push(`${pad}${r.cells.map((cell: any) => inlineText(cell.content ?? cell)).join('\t')}`);
+        break;
+      default:
+        lines.push(`${pad}${text}`);
+    }
+    if (Array.isArray(b.children) && b.children.length) lines.push(toPlainText(b.children, depth + 1));
+  }
+  return lines.join('\n');
+}
+
 // ── HTML ─────────────────────────────────────────────────────────────────
 export function toHtml(blocks: Block[]): string {
   if (!Array.isArray(blocks)) return '';
@@ -200,6 +236,10 @@ export function exportMarkdown(title: string, blocks: Block[]) {
   download(`${slug(title)}.md`, `# ${title || 'Untitled'}\n\n${toMarkdown(blocks)}\n`, 'text/markdown');
 }
 
+export function exportText(title: string, blocks: Block[]) {
+  download(`${slug(title)}.txt`, `${title || 'Untitled'}\n\n${toPlainText(blocks)}\n`, 'text/plain');
+}
+
 export function exportJson(title: string, page: unknown) {
   download(`${slug(title)}.json`, JSON.stringify(page, null, 2), 'application/json');
 }
@@ -211,7 +251,7 @@ export function exportHtmlFile(title: string, blocks: Block[], font: PageFont = 
 export function htmlDocument(title: string, blocks: Block[], font: PageFont = 'serif'): string {
   return `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title>
 <style>
-  body{font-family:${BODY_FONT[font]};max-width:720px;margin:40px auto;padding:0 20px;color:#211f1c;line-height:1.6}
+  body{font-family:${BODY_FONT(font)};max-width:720px;margin:40px auto;padding:0 20px;color:#211f1c;line-height:1.6}
   /* Heading scale mirrors the live editor — single source of truth in
      features/editor/headingScale.ts, so editor and export never diverge. */
   ${headingScaleExportCss()}
@@ -271,7 +311,7 @@ export async function exportDocx(title: string, blocks: Block[], font: PageFont 
   walk(blocks);
 
   const doc = new Document({
-    styles: { default: { document: { run: { font: DOCX_FONT[font] } } } },
+    styles: { default: { document: { run: { font: DOCX_FONT(font) } } } },
     sections: [{ children: paras }],
   });
   const blob = await Packer.toBlob(doc);

@@ -16,6 +16,7 @@ import { PageHeader } from './PageHeader';
 import { Outline } from './Outline';
 import type { OutlineHeading } from './outline';
 import { computeStats, type DocStats } from './stats';
+import { DEFAULT_PAGE_FONT, pageFontVars } from './pageFonts';
 
 export function PageView() {
   const { pageId } = useParams();
@@ -92,17 +93,21 @@ export function PageView() {
     <div
       className="relative h-full overflow-y-auto"
       data-page-scroll
-      data-page-font={page.fontFamily ?? 'serif'}
-      style={
-        page.backgroundUrl
+      data-page-font={page.fontFamily ?? DEFAULT_PAGE_FONT}
+      // The page face is published as CSS custom properties here and inherits
+      // into the header and the whole editor — one place, 21 faces, no per-face
+      // CSS rule (STYLEGUIDE §3.3).
+      style={{
+        ...pageFontVars(page.fontFamily),
+        ...(page.backgroundUrl
           ? {
               backgroundImage: `url(${page.backgroundUrl})`,
               backgroundSize: 'cover',
               backgroundAttachment: 'fixed',
               backgroundPosition: 'center',
             }
-          : undefined
-      }
+          : null),
+      }}
     >
       {/* Page-scoped custom CSS applied live to the content area. */}
       <GlobalStyles css={page.customCss} scope="page" />

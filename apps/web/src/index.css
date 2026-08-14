@@ -1,17 +1,5 @@
-/* Self-hosted fonts (work offline). */
-@import '@fontsource/space-grotesk/400.css';
-@import '@fontsource/space-grotesk/500.css';
-@import '@fontsource/space-grotesk/600.css';
-@import '@fontsource/space-grotesk/700.css';
-@import '@fontsource/inter/400.css';
-@import '@fontsource/inter/500.css';
-@import '@fontsource/inter/600.css';
-@import '@fontsource/newsreader/400.css';
-@import '@fontsource/newsreader/500.css';
-@import '@fontsource/newsreader/600.css';
-@import '@fontsource/newsreader/400-italic.css';
-@import '@fontsource/jetbrains-mono/400.css';
-@import '@fontsource/jetbrains-mono/500.css';
+/* Self-hosted font library (works offline) — see fonts.css / STYLEGUIDE §3.3. */
+@import './fonts.css';
 
 @tailwind base;
 @tailwind components;
@@ -58,22 +46,21 @@
   --title-size: 40px;
   --title-lh: 48px;
 
-  /* Page body face (per-page font family, see docs/STYLEGUIDE.md §3.3).
-   * Default = Newsreader serif; overridden per page by [data-page-font]. */
+  /* Page faces (per-page font family, see docs/STYLEGUIDE.md §3.3). These are
+   * the fallbacks for anything rendered outside a page container; a page
+   * container publishes its own values inline from `pageFontVars()`, so the
+   * whole 21-face library needs no per-face CSS rule here. */
   --wf-body-font: Newsreader, Georgia, serif;
+  --wf-title-font: 'Space Grotesk', system-ui, sans-serif;
   --wf-mono-font: 'JetBrains Mono', ui-monospace, monospace;
 
   color-scheme: light;
 }
 
-/* Per-page font family. `serif` is the default (no override); the page
- * container carries data-page-font and the value inherits into the editor. */
-[data-page-font='sans'] {
-  --wf-body-font: Inter, system-ui, sans-serif;
-}
-[data-page-font='mono'] {
-  --wf-body-font: var(--wf-mono-font);
-}
+/* Per-page font family: the page container sets `--wf-body-font` /
+ * `--wf-title-font` inline (see `pageFontVars` in features/editor/pageFonts.ts)
+ * and the values inherit into the editor. It also carries
+ * `data-page-font="<key>"` purely as a hook for per-page custom CSS. */
 
 :root:not([data-theme='light']) {
   @media (prefers-color-scheme: dark) {

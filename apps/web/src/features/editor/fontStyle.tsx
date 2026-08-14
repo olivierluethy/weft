@@ -1,13 +1,12 @@
 import { createReactStyleSpec } from '@blocknote/react';
+import { PAGE_FONTS } from './pageFonts';
 
-/** Font-family stacks for the inline `font` mark. These match the page-level
- * faces (docs/STYLEGUIDE.md §3.3/§3.4) exactly, so an inline `mono` run reads
- * identically to a `mono` page. */
-export const FONT_STACKS: Record<string, string> = {
-  sans: 'Inter, system-ui, sans-serif',
-  serif: 'Newsreader, Georgia, serif',
-  mono: "'JetBrains Mono', ui-monospace, monospace",
-};
+/** Font-family stacks for the inline `font` mark. Read straight out of the page
+ * font registry (docs/STYLEGUIDE.md §3.3/§3.4) rather than restated here, so an
+ * inline `mono` run is guaranteed to read identically to a `mono` page. */
+export const FONT_STACKS: Record<string, string> = Object.fromEntries(
+  PAGE_FONTS.map((f) => [f.key, f.stack]),
+);
 
 /** Choices surfaced in the formatting-toolbar dropdown. `''` = Default (clears
  * the mark, so the text falls back to the page face). */

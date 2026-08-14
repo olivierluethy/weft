@@ -211,12 +211,11 @@
 }
 
 /* Page title follows the page font for the non-default faces (the serif default
- * keeps its Space Grotesk display look untouched). */
-[data-page-font='sans'] .weft-title {
-  font-family: Inter, system-ui, sans-serif;
-}
-[data-page-font='mono'] .weft-title {
-  font-family: var(--wf-mono-font);
+ * keeps its Space Grotesk display look untouched). Which of the two it is, is
+ * decided by `pageFontVars()` on the page container — see STYLEGUIDE §3.3. */
+.weft-title,
+.weft-title-compact {
+  font-family: var(--wf-title-font);
 }
 
 /* Collaboration carets. */

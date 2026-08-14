@@ -58,6 +58,27 @@ export function Popover({
   const coords = useAnchoredPosition({ open, triggerRef, panelRef, align });
   useDismiss(open, () => setOpen(false), [triggerRef, panelRef]);
 
+  // Move focus into the panel once it's measured and visible. The panel's first
+  // frame is `visibility: hidden` (until positioned), and browsers won't focus a
+  // hidden element — so a child's `autoFocus` silently no-ops. Doing it here makes
+  // type-ahead search and arrow-key navigation actually work, and — crucially —
+  // keeps focus inside the portal so Escape reaches the shared dismiss handler
+  // instead of being swallowed by the editor the trigger lives in.
+  const focusedForOpen = useRef(false);
+  useEffect(() => {
+    if (!open) {
+      focusedForOpen.current = false;
+      return;
+    }
+    if (focusedForOpen.current || !coords) return;
+    const panel = panelRef.current;
+    if (!panel) return;
+    focusedForOpen.current = true;
+    if (panel.contains(document.activeElement)) return;
+    const field = panel.querySelector<HTMLElement>('input, textarea');
+    (field ?? panel).focus?.({ preventScroll: true });
+  }, [open, coords]);
+
   const triggerEl = cloneElement(trigger as ReactElement<any>, {
     onClick: (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -72,13 +93,14 @@ export function Popover({
         <Portal>
           <div
             ref={panelRef}
+            tabIndex={-1}
             style={{
               position: 'fixed',
               top: coords?.top ?? 0,
               left: coords?.left ?? 0,
               visibility: coords ? 'visible' : 'hidden',
             }}
-            className={cn('z-overlay animate-[fade_.12s_ease]', className)}
+            className={cn('z-overlay animate-[fade_.12s_ease] outline-none', className)}
           >
             {typeof children === 'function' ? children(() => setOpen(false)) : children}
           </div>

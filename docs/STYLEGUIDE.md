@@ -361,7 +361,15 @@ open below the trigger, flip above when there isn't room, shift horizontally to 
 the viewport with an 8px margin, and re-measure on scroll/resize. **Dismissal** is shared
 via `useDismiss`: Escape and outside-click (pointer outside both trigger and panel) close
 every overlay, with the same `fade .12s` entrance. Same shadow (`shadow-md`), same radius
-(`rounded-md`), same motion everywhere.
+(`rounded-md`), same motion everywhere. Two robustness invariants keep this reliable when a
+panel re-renders under its own click: (1) outside-click is judged from the mousedown's
+**composed path**, not `contains(e.target)` — a menu item that swaps the panel to a sub-view
+synchronously unmounts the clicked row, so by the time the document listener runs the target
+is detached and `contains` would wrongly read "outside"; the path still holds the panel, so
+the menu stays open. (2) `Popover` **moves focus into the panel** once it's measured (the
+first frame is `visibility:hidden`, where a child's `autoFocus` no-ops) — type-ahead search
+and arrow keys work, and focus stays inside the portal so Escape reaches the shared handler
+instead of being swallowed by the editor the trigger lives in.
 
 **Sidebar** — `--sunk` background, `280px` default (resizable). Row height 30px, `text-sm`.
 Hover `--surface`; active page `--thread-soft` fill + `--thread` text + 2px `--thread` left bar.
@@ -561,6 +569,16 @@ word-boundary / contiguity bonuses, plus a bounded-Levenshtein typo fallback so
 behaves identically everywhere. Both menus open through the shared `Popover`
 (portalled, viewport-flipping, Escape / outside-click) with `registerOverlay=false`
 so the handle they anchor to stays put.
+
+**Editor preferences.** App-level editor toggles live in `hooks/useEditorPrefs.ts`
+— the same lightweight `zustand` + `localStorage` shape as `useTheme`, so there's one
+preference pattern, not two. **Spellcheck** is surfaced in the page **"…" menu** (next
+to Import / Export) as a clear `Spellcheck: On/Off` item with a check. The editor
+applies it by setting the `spellcheck` attribute on the ProseMirror root **and** the
+content wrapper: every note text field inherits it (paragraphs, headings, lists,
+quotes, table cells, code, columns), plus the empty-page band beside the editor — one
+switch, every editable, persisted across page switches. Page titles stay
+`spellCheck={false}` regardless.
 
 ### 6.6 Dialog system
 

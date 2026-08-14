@@ -93,6 +93,29 @@ export function BlockActionMenu({
 }) {
   const [view, setView] = useState<View>('root');
   const canColor = useMemo(() => blockSupportsColor(ctx.editor, block), [ctx.editor, block]);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  // Escape handling, owned by the panel itself. We listen in the *capture* phase
+  // on the panel element so it fires before any descendant (search input, editor)
+  // can stop the event — the shared document-level dismiss never sees Escape here
+  // because something between the focused field and `document` stops it mid-bubble.
+  // A sub-view steps back to the root; the root closes the whole menu.
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.stopPropagation();
+      if (view !== 'root') {
+        e.preventDefault();
+        setView('root');
+      } else {
+        close();
+      }
+    };
+    el.addEventListener('keydown', onKey, true);
+    return () => el.removeEventListener('keydown', onKey, true);
+  }, [view, close]);
 
   const actions = useMemo<ActionDef[]>(() => {
     const list: ActionDef[] = [
@@ -153,18 +176,9 @@ export function BlockActionMenu({
     return list;
   }, [canColor, ctx, block, close]);
 
-  const onContainerKeyDown = (e: React.KeyboardEvent) => {
-    // Escape steps back to the root before letting the Popover close the menu.
-    if (e.key === 'Escape' && view !== 'root') {
-      e.preventDefault();
-      e.stopPropagation();
-      setView('root');
-    }
-  };
-
   return (
     <div
-      onKeyDown={onContainerKeyDown}
+      ref={rootRef}
       className="flex max-h-[min(440px,76vh)] w-72 flex-col overflow-hidden rounded-md border border-line bg-surface shadow-md"
     >
       {view === 'root' && (

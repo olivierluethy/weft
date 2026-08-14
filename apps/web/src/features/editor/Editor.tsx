@@ -6,37 +6,24 @@ import {
   SuggestionMenuController,
   FormattingToolbarController,
   SideMenuController,
-  getDefaultReactSlashMenuItems,
   type DefaultReactSuggestionItem,
 } from '@blocknote/react';
-import { filterSuggestionItems, insertOrUpdateBlock } from '@blocknote/core';
+import { filterSuggestionItems } from '@blocknote/core';
 import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/mantine/style.css';
-import {
-  FileText,
-  Heading1,
-  Heading2,
-  Heading3,
-  Heading4,
-  Heading5,
-  Heading6,
-} from 'lucide-react';
 import './editor.css';
-// Side-effect: publishes the H1–H6 type scale as CSS custom properties.
-import { HEADING_LABELS, HEADING_LEVELS, type HeadingLevel } from './headingScale';
-
-const HEADING_ICONS: Record<HeadingLevel, typeof Heading1> = {
-  1: Heading1,
-  2: Heading2,
-  3: Heading3,
-  4: Heading4,
-  5: Heading5,
-  6: Heading6,
-};
+// Side-effect (via blockTypes): publishes the H1–H6 type scale as CSS custom properties.
 import { api } from '@/lib/api';
 import { hashHue } from '@/lib/utils';
 import { computeStats, docText, type DocStats } from './stats';
-import { WeftSideMenu, PageConvertDialog, convertSpec, type ConvertTarget } from './WeftSideMenu';
+import { WeftSideMenu, PageConvertDialog } from './WeftSideMenu';
+import {
+  getSlashBlockItems,
+  convertBlockType,
+  blockPlainText,
+  type BlockTypeDef,
+  type BlockTypeCtx,
+} from './blockTypes';
 import { useThemeStore } from '@/hooks/useTheme';
 import { useTree, useInvalidate } from '@/lib/queries';
 import { weftSchema } from './mention';
@@ -150,62 +137,22 @@ export function Editor({
           ]),
       }));
 
-  // Slash menu items = BlockNote defaults + a `/page` command that spawns a real
-  // child page (nested in the sidebar tree) and drops a link block to it here.
-  const getSlashItems = async (query: string): Promise<DefaultReactSuggestionItem[]> => {
-    const defaults = getDefaultReactSlashMenuItems(editor);
+  // Shared block-type context: both the "/" slash menu and the "+" convert menu
+  // are built from the single `BLOCK_TYPE_DEFS` registry (blockTypes.tsx) via
+  // this context, so the two menus can never drift apart.
+  const blockCtx: BlockTypeCtx = useMemo(
+    () => ({
+      editor,
+      workspaceId,
+      pageId,
+      invalidateTree: () => invalidate.tree(workspaceId),
+    }),
+    [editor, workspaceId, pageId, invalidate],
+  );
 
-    // Provide all six heading levels ourselves. BlockNote only ships Heading 1–3
-    // and gates even those behind `checkDefaultBlockTypeInSchema("heading")`, a
-    // *reference-equality* check against its built-in heading block. Because
-    // Weft swaps in a six-level heading block (weftSchema), that check fails and
-    // BlockNote drops ALL its default heading items — which is why only 4–6 (the
-    // ones we used to add manually) showed up. So we own the full set here,
-    // grouped and ordered H1→H6, and drop any stray built-in heading items.
-    const headingGroup = editor.dictionary.slash_menu.heading.group;
-    const headingItems: DefaultReactSuggestionItem[] = HEADING_LEVELS.map((level) => {
-      const Icon = HEADING_ICONS[level];
-      return {
-        title: HEADING_LABELS[level],
-        subtext: `Level ${level} heading`,
-        group: headingGroup,
-        aliases: [`h${level}`, `heading${level}`, `heading ${level}`],
-        icon: <Icon size={18} />,
-        onItemClick: () => insertOrUpdateBlock(editor, { type: 'heading', props: { level: level as never } }),
-      };
-    });
-    const nonHeadingDefaults = defaults.filter((d) => !d.title?.startsWith('Heading'));
-    const withHeadings = [...headingItems, ...nonHeadingDefaults];
-
-    const pageItem: DefaultReactSuggestionItem = {
-      title: 'Page',
-      subtext: 'Create a sub-page nested in this one',
-      group: 'Basic blocks',
-      icon: <FileText size={18} />,
-      onItemClick: async () => {
-        try {
-          const res = await api.post<{ page: { id: string } }>('/pages', {
-            workspaceId,
-            parentId: pageId,
-          });
-          insertOrUpdateBlock(editor, {
-            type: 'pageLink',
-            props: { pageId: res.page.id, workspaceId, title: '', icon: '' },
-          });
-          await invalidate.tree(workspaceId);
-        } catch {
-          /* page creation failed — leave the editor untouched */
-        }
-      },
-    };
-    // Keep the "Basic blocks" group contiguous by slotting Page after its last member.
-    const lastBasic = withHeadings.map((d) => d.group).lastIndexOf('Basic blocks');
-    const merged =
-      lastBasic === -1
-        ? [...withHeadings, pageItem]
-        : [...withHeadings.slice(0, lastBasic + 1), pageItem, ...withHeadings.slice(lastBasic + 1)];
-    return filterSuggestionItems(merged, query);
-  };
+  // Slash menu items come straight from the shared registry (insert verb).
+  const getSlashItems = async (query: string): Promise<DefaultReactSuggestionItem[]> =>
+    filterSuggestionItems(getSlashBlockItems(blockCtx), query);
 
   const saveTimer = useRef<ReturnType<typeof setTimeout>>();
   const latest = useRef<unknown>(initialContent);
@@ -341,30 +288,29 @@ export function Editor({
   // held here so the confirm dialog renders at the editor level, independent of
   // the ephemeral hover side-menu that triggered it.
   const [convertReq, setConvertReq] = useState<
-    { block: any; target: ConvertTarget; childId: string; title: string } | null
+    { block: any; def: BlockTypeDef; childId: string; title: string } | null
   >(null);
 
-  // Replace a Page block with a paragraph/heading carrying the page's title, and
-  // move the now-unlinked child page to Trash (recoverable).
+  // Replace a Page block (`pageLink`) with the chosen block type, carrying the
+  // page's title as the new block's text, and move the now-unlinked child page
+  // to Trash (recoverable).
   const performPageConvert = useCallback(
-    async (block: any, target: ConvertTarget, childId: string, title: string) => {
-      editor.updateBlock(block, {
-        ...convertSpec(target),
-        content: [{ type: 'text', text: title, styles: {} }],
-      } as never);
+    async (block: any, def: BlockTypeDef, childId: string, title: string) => {
+      await convertBlockType(def, block, blockCtx, title);
       if (childId) {
         await api.del(`/pages/${childId}`).catch(() => undefined);
         await invalidate.tree(workspaceId);
       }
     },
-    [editor, invalidate, workspaceId],
+    [blockCtx, invalidate, workspaceId],
   );
 
   const handleBlockConvert = useCallback(
-    async (block: any, target: ConvertTarget) => {
-      // Regular blocks convert in place, preserving their text.
+    async (block: any, def: BlockTypeDef) => {
+      // Regular blocks convert in place, preserving their text. This also covers
+      // converting a normal block INTO a Page (def.spec.kind === 'page').
       if (block.type !== 'pageLink') {
-        editor.updateBlock(block, convertSpec(target) as never);
+        await convertBlockType(def, block, blockCtx, blockPlainText(block));
         return;
       }
       const childId = (block.props?.pageId as string) || '';
@@ -381,10 +327,10 @@ export function Editor({
           hasContent = true;
         }
       }
-      if (hasContent) setConvertReq({ block, target, childId, title });
-      else void performPageConvert(block, target, childId, title);
+      if (hasContent) setConvertReq({ block, def, childId, title });
+      else void performPageConvert(block, def, childId, title);
     },
-    [editor, tree, performPageConvert],
+    [blockCtx, tree, performPageConvert],
   );
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -431,7 +377,7 @@ export function Editor({
           onConfirm={() => {
             const req = convertReq;
             setConvertReq(null);
-            void performPageConvert(req.block, req.target, req.childId, req.title);
+            void performPageConvert(req.block, req.def, req.childId, req.title);
           }}
         />
       )}

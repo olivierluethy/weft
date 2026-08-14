@@ -64,6 +64,16 @@ function dateBasis(sort: SortKey): 'created' | 'edited' {
   return sort === 'created-desc' || sort === 'created-asc' ? 'created' : 'edited';
 }
 
+/** One-click answers to the common "what did I touch lately" questions
+ * (spec §29-30). Each sets a sort + date filter in a single tap without
+ * duplicating the full Activity time-machine. */
+const QUICK_FILTERS: { label: string; sort: SortKey; date: DateKey }[] = [
+  { label: 'Edited today', sort: 'edited-desc', date: 'today' },
+  { label: 'Edited this week', sort: 'edited-desc', date: 'week' },
+  { label: 'Created this month', sort: 'created-desc', date: 'month' },
+  { label: 'Created this year', sort: 'created-desc', date: 'year' },
+];
+
 function rangeStart(key: DateKey): number | null {
   const now = new Date();
   switch (key) {
@@ -179,6 +189,38 @@ export function HomeView() {
               />
             )}
           </Popover>
+        </div>
+
+        {/* Quick filters — fastest path to "what did I work on lately" */}
+        <div className="mb-8 flex flex-wrap items-center gap-1.5">
+          {QUICK_FILTERS.map((f) => {
+            const active = sort === f.sort && dateFilter === f.date;
+            return (
+              <button
+                key={f.label}
+                onClick={() => {
+                  setSortPersist(f.sort);
+                  setDatePersist(f.date);
+                }}
+                className={cn(
+                  'rounded-full border px-3 py-1 text-xs font-medium transition',
+                  active
+                    ? 'border-thread/40 bg-thread-soft text-thread'
+                    : 'border-line text-ink-muted hover:bg-sunk hover:text-ink',
+                )}
+              >
+                {f.label}
+              </button>
+            );
+          })}
+          {dateFilter !== 'all' && (
+            <button
+              onClick={() => setDatePersist('all')}
+              className="rounded-full border border-line px-3 py-1 text-xs font-medium text-ink-faint transition hover:bg-sunk hover:text-ink"
+            >
+              Clear
+            </button>
+          )}
         </div>
 
         {favorites.length > 0 && (

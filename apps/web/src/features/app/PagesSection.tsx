@@ -16,7 +16,13 @@ const SORT_LABEL: Record<SortMode, string> = {
 /** The "Pages" navigation group: a hover-revealed control cluster (new
  * top-level page, sort, collapse) over the page tree. Collapse and sort mode
  * persist locally so the navigation feels like a stable workspace surface. */
-export function PagesSection({ nodes }: { nodes: PageTreeNode[] }) {
+export function PagesSection({
+  nodes,
+  onOpenPeek,
+}: {
+  nodes: PageTreeNode[];
+  onOpenPeek?: (pageId: string) => void;
+}) {
   const createPage = useCreatePage();
   const [collapsed, setCollapsed] = useState(
     () => localStorage.getItem('weft-pages-collapsed') === '1',
@@ -97,7 +103,7 @@ export function PagesSection({ nodes }: { nodes: PageTreeNode[] }) {
 
       {!collapsed && (
         <div className="mt-0.5">
-          <PageTree nodes={nodes} sortMode={sortMode} />
+          <PageTree nodes={nodes} sortMode={sortMode} onOpenPeek={onOpenPeek} />
         </div>
       )}
     </div>

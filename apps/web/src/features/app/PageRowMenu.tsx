@@ -1,7 +1,17 @@
 import { type ReactElement } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Star, Copy, Link2, Trash2, FileStack, Lock, Unlock } from 'lucide-react';
-import { Menu } from '@/components/ui/Menu';
+import {
+  Star,
+  Copy,
+  Link2,
+  Trash2,
+  FileStack,
+  Lock,
+  Unlock,
+  Pencil,
+  ExternalLink,
+} from 'lucide-react';
+import { Menu, type MenuItem } from '@/components/ui/Menu';
 import { api } from '@/lib/api';
 import { useInvalidate } from '@/lib/queries';
 import { useWorkspace } from './workspace';
@@ -13,12 +23,18 @@ export function PageRowMenu({
   title,
   isFavorite,
   isLocked,
+  onRename,
+  onOpenPeek,
   children,
 }: {
   pageId: string;
   title: string;
   isFavorite?: boolean;
   isLocked?: boolean;
+  /** Start an inline rename in the caller (sidebar row). */
+  onRename?: () => void;
+  /** Open the page in the docked side peek instead of navigating. */
+  onOpenPeek?: () => void;
   children: ReactElement;
 }) {
   const { workspaceId } = useWorkspace();
@@ -31,11 +47,27 @@ export function PageRowMenu({
     invalidate.page(pageId);
   };
 
+  const items: MenuItem[] = [
+    ...(onRename
+      ? [{ label: 'Rename', icon: <Pencil size={15} />, onClick: onRename }]
+      : []),
+    {
+      label: 'Open in new tab',
+      icon: <ExternalLink size={15} />,
+      onClick: () => window.open(`/p/${pageId}`, '_blank', 'noopener'),
+    },
+    ...(onOpenPeek
+      ? [{ label: 'Open in side peek', icon: <ExternalLink size={15} />, onClick: onOpenPeek }]
+      : []),
+    { divider: true, label: '' },
+  ];
+
   return (
     <Menu
       align="end"
       trigger={children}
       items={[
+        ...items,
         {
           label: isFavorite ? 'Remove from favorites' : 'Add to favorites',
           icon: <Star size={15} className={isFavorite ? 'fill-madder text-madder' : ''} />,

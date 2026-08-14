@@ -142,6 +142,41 @@ already uses successfully.
 - `apps/web/src/features/editor/blockTypes.tsx` — `focusInsertedInlineBlock` helper +
   guarded call in `insertBlockType`'s `simple` case.
 
+## 7a. Follow-up — one frame wasn't enough (Quote & Callout)
+
+The re-assert above ran after **exactly one** `requestAnimationFrame`. That turned out
+to be a race, not a fix: a React node view can take **more than one commit/frame** to
+mount its editable. Whichever block committed inside that single frame landed (Toggle, in
+practice), while **Highlight/Callout and Quote committed a frame later** — so
+`setTextCursorPosition` still ran against a not-yet-mounted editable and the first
+keystroke still fell to the next line. The user reported exactly that split: Toggle fixed,
+Highlight and Quote still broken.
+
+The hardened fix keeps the same mechanism but removes the timing gamble: re-assert the
+caret **on every frame** and stop the instant the *DOM selection* actually lands inside the
+block (`[data-id]` contains `window.getSelection().anchorNode`), with a ~20-frame safety
+cap. Verifying the **DOM** side — not just the model position — is the point: the model
+selection was always correct; it was the DOM selection that lagged and misdirected the
+keystroke. This is deterministic no matter how many frames the node view takes to mount.
+
+```ts
+function focusInsertedInlineBlock(editor, blockId) {
+  let frames = 0;
+  const landed = () => {
+    const el = document.querySelector(`[data-id="${CSS.escape(blockId)}"]`);
+    const sel = window.getSelection();
+    return !!(el && sel?.anchorNode && el.contains(sel.anchorNode));
+  };
+  const attempt = () => {
+    try { editor.focus(); editor.setTextCursorPosition(blockId, 'end'); }
+    catch { return; }
+    if (landed() || ++frames >= 20) return;
+    requestAnimationFrame(attempt);
+  };
+  requestAnimationFrame(attempt);
+}
+```
+
 ## 8. Follow-ups (optional)
 
 - If a future upgrade makes BlockNote mount custom node views synchronously, this

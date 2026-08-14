@@ -211,12 +211,24 @@
 }
 
 /* Page title follows the page font for the non-default faces (the serif default
- * keeps its Space Grotesk display look untouched). */
-[data-page-font='sans'] .weft-title {
-  font-family: Inter, system-ui, sans-serif;
+ * keeps its Space Grotesk display look untouched). Which of the two it is, is
+ * decided by `pageFontVars()` on the page container — see STYLEGUIDE §3.3. */
+.weft-title,
+.weft-title-compact {
+  font-family: var(--wf-title-font);
 }
-[data-page-font='mono'] .weft-title {
-  font-family: var(--wf-mono-font);
+
+/* Inline font-family trigger in the formatting toolbar (§3.4). It rides inside
+ * BlockNote's own toolbar Button, so all it needs is the internal layout — the
+ * chrome comes from Mantine and stays in step with the heading switch. */
+.wf-inline-font-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.wf-inline-font-trigger > svg:last-child {
+  opacity: 0.6;
 }
 
 /* Collaboration carets. */

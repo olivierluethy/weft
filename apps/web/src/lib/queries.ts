@@ -1,5 +1,10 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import type { PageTreeNode, WorkspaceOverviewPage, ActivityFeed } from '@weft/shared';
+import type {
+  PageTreeNode,
+  WorkspaceOverviewPage,
+  ActivityFeed,
+  PageFontKey,
+} from '@weft/shared';
 import { api } from './api';
 
 export interface PageDetail {
@@ -18,7 +23,8 @@ export interface PageDetail {
   isLocked: boolean;
   isFullWidth: boolean;
   width: number;
-  fontFamily: 'serif' | 'sans' | 'mono';
+  /** A key from the page font library — see features/editor/pageFonts.ts. */
+  fontFamily: PageFontKey;
   isFavorite: boolean;
   updatedAt: string;
   tags: { id: string; name: string; color: string }[];

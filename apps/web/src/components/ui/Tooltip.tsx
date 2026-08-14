@@ -37,7 +37,15 @@ export function Tooltip({
     setCoords({ top, left });
   }, [side]);
 
+  // Once the trigger has been clicked, the tooltip has done its job — whatever
+  // the click opened is now the thing to read, and a hint bubble parked on top
+  // of a freshly opened panel is just in the way. Stay suppressed until the
+  // pointer actually leaves and comes back. (The click also focuses the button,
+  // so without this the focus path would re-show it a moment later.)
+  const suppressed = useRef(false);
+
   const show = () => {
+    if (suppressed.current) return;
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => {
       place();
@@ -56,8 +64,18 @@ export function Tooltip({
     <span
       ref={wrapRef}
       className="inline-flex"
-      onMouseEnter={show}
-      onMouseLeave={hide}
+      onMouseEnter={() => {
+        suppressed.current = false;
+        show();
+      }}
+      onMouseLeave={() => {
+        suppressed.current = false;
+        hide();
+      }}
+      onMouseDownCapture={() => {
+        suppressed.current = true;
+        hide();
+      }}
       onFocusCapture={show}
       onBlurCapture={hide}
     >

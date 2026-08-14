@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ROLES, SHARE_PERMISSIONS } from './roles.js';
+import { PAGE_FONT_KEYS } from './constants.js';
 
 /** Shared request/response contracts. The server validates with these; the web
  * app imports the inferred types so both ends stay in lock-step. */
@@ -61,7 +62,7 @@ export const updatePageSchema = z.object({
   isLocked: z.boolean().optional(),
   isFullWidth: z.boolean().optional(),
   width: z.number().min(400).max(1400).optional(),
-  fontFamily: z.enum(['serif', 'sans', 'mono']).optional(),
+  fontFamily: z.enum(PAGE_FONT_KEYS).optional(),
   customCss: z.string().nullable().optional(),
   isFavorite: z.boolean().optional(),
 });

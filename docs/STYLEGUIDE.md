@@ -187,16 +187,36 @@ persisted per page. The default preserves Weft's existing look exactly. Switchin
 font re-faces the whole page voice — title, headings and body — while the tokenised heading
 **sizes** (§3.2) stay fixed, so hierarchy never depends on the chosen family.
 
-| Key      | Page face (title / headings / body) | Label   |
-| -------- | ----------------------------------- | ------- |
-| `serif`  | Newsreader (default)                | Serif   |
-| `sans`   | Inter                               | Sans    |
-| `mono`   | JetBrains Mono                      | Mono    |
+**The font library is a single source of truth: `features/editor/pageFonts.ts`.** Every
+consumer — the picker, the page container, the HTML/PDF/DOCX exporters, the side peek —
+reads it; nothing hard-codes a face. Each entry declares a `key` (persisted), a `label`,
+a `group`, a CSS `stack` and a `docx` fallback name.
 
-The active face is driven by a `--wf-body-font` token, switched by a
-`data-page-font="serif|sans|mono"` attribute on the page container; `serif` is the no-op
-default and leaves the current design untouched. The picker lives in the page action bar
-(a `Type` icon). Exports (HTML/PDF/DOCX) carry the same face.
+**Only self-hosted faces are offered.** Every family in the list ships as an
+`@fontsource` package imported in `src/fonts.css` (latin subset, weights 400 + 700), so
+the list can never advertise a face that silently falls back to something else — a
+promise the old "Georgia" style stack could not keep on Linux. The `@font-face` rules are
+declaration-only: a woff2 is fetched by the browser **only** when a page actually uses
+that family, so 21 faces cost one small CSS block, not 21 downloads.
+
+| Group     | Keys                                                                                                     |
+| --------- | -------------------------------------------------------------------------------------------------------- |
+| **Serif** | `serif` (Newsreader — default), `lora`, `merriweather`, `source-serif`, `playfair`, `baskerville`, `garamond` |
+| **Sans**  | `sans` (Inter), `roboto`, `open-sans`, `lato`, `montserrat`, `poppins`, `nunito`, `source-sans`, `work-sans`, `grotesk` |
+| **Mono**  | `mono` (JetBrains Mono), `fira-code`, `source-code`, `plex-mono`                                          |
+
+`serif` / `sans` / `mono` are the original three keys, kept verbatim so existing pages keep
+their face; `serif` is still the no-op default and leaves the current design untouched.
+
+The active face is driven by two tokens set **inline on the page container** —
+`--wf-body-font` (title, headings, body) and `--wf-title-font` (the page title, which keeps
+its Space Grotesk display look on the default face only). The container also keeps its
+`data-page-font="<key>"` attribute as a styling hook for custom CSS. The picker lives in
+**one place only** — the page options panel (§6.7), with the rest of the page settings. It
+lists the faces rendered in themselves, grouped, with the active one checked. There is no
+second entry point in the action bar: the page face is a setting, and a setting with two
+front doors is two states to keep in sync and two places to go looking. Exports
+(HTML/PDF/DOCX) carry the same face.
 
 Display type uses tight tracking (`-0.02em` on titles/H1). Body uses default tracking.
 
@@ -205,17 +225,23 @@ Display type uses tight tracking (`-0.02em` on titles/H1). Body uses default tra
 Font family is **also** available as an inline mark on a text selection, overriding the
 page default (§3.3) for the marked characters only — the page face stays the document
 default. It is a BlockNote style (`font`, a string value) exposed in the selection
-**formatting toolbar** as a `Type`-icon dropdown: **Default / Sans / Serif / Mono**.
-`Default` clears the mark and the text falls back to the page face. The three faces reuse
-the exact same stacks as §3.3, so an inline `Mono` run reads identically to a `mono` page:
+**formatting toolbar**.
 
-| Value   | Face stack                              |
-| ------- | --------------------------------------- |
-| `sans`  | Inter, system-ui, sans-serif            |
-| `serif` | Newsreader, Georgia, serif              |
-| `mono`  | 'JetBrains Mono', ui-monospace, monospace |
+**The two scales share one library and one picker.** The toolbar control opens the same
+`FontList` as the page options panel, over the same 21 faces from the same registry — so a
+key is never offered at one scale and missing at the other, and an inline *Lora* run reads
+identically to a *Lora* page. It adds exactly one thing the page-level picker has no use
+for: a **Default** row that *clears* the mark, because "no face of its own" is a real state
+for a run of text and never a state for a page. The trigger names the active run's face
+(or `Default`), and picking is live and repeatable — the list stays open, so you can try
+three faces against the surrounding text without reselecting anything.
 
-The dropdown reflects the active run's face; the currently-applied value is checked.
+**The one BlockNote constraint worth knowing.** `FormattingToolbarView.blurHandler` hides
+the toolbar the moment the editor blurs — which typing in the picker's search field is.
+It makes a single exception, for a `relatedTarget` matching `.bn-ui-container, .bn-ui-container *`.
+That class carries **no CSS anywhere in BlockNote**; it exists purely as this opt-out. The
+portalled popover panel therefore claims it. Any future in-editor overlay that needs to
+take focus must do the same, or it will dismiss the toolbar that opened it.
 
 ---
 
@@ -572,8 +598,8 @@ so the handle they anchor to stays put.
 
 **Editor preferences.** App-level editor toggles live in `hooks/useEditorPrefs.ts`
 — the same lightweight `zustand` + `localStorage` shape as `useTheme`, so there's one
-preference pattern, not two. **Spellcheck** is surfaced in the page **"…" menu** (next
-to Import / Export) as a clear `Spellcheck: On/Off` item with a check. The editor
+preference pattern, not two. **Spellcheck** is surfaced in the page **options panel**
+(§6.7) as a real checkbox row, toggleable repeatedly without the panel closing. The editor
 applies it by setting the `spellcheck` attribute on the ProseMirror root **and** the
 content wrapper: every note text field inherits it (paragraphs, headings, lists,
 quotes, table cells, code, columns), plus the empty-page band beside the editor — one
@@ -593,6 +619,47 @@ dialog holding unsaved edits (Keep editing / Discard / Save). The **Import** dia
 (`features/editor/ImportDialog.tsx`) is a single drop-or-choose target with honest
 progress/error states and only the formats Weft can actually parse (Markdown/text,
 HTML, Weft JSON, CSV — the reciprocal of the exporters).
+
+### 6.7 Page options — a persistent control panel, not a dropdown
+
+The page **"…"** surface (`features/editor/PageOptionsPanel.tsx`) is a **control panel**,
+not a menu. The distinction is behavioural and it is the rule everything else follows:
+
+> **If a control changes something visible on the page you are looking at, using it must
+> not close the panel.** You open it once, try settings, judge the result, adjust again.
+
+Two kinds of row, and only two:
+
+| Kind                | Examples                                             | On activate                          |
+| ------------------- | ---------------------------------------------------- | ------------------------------------- |
+| **Setting** (live)  | Spellcheck, Width, Font family, Lock, Full width      | applies instantly, **panel stays open** |
+| **Action** (leaves) | Change cover, Custom CSS, Move to, Import, Export, Duplicate, Trash | runs, **panel closes** — it hands off to another surface |
+
+A generic `Menu` cannot express this: `components/ui/Menu.tsx` closes on *every* item
+click, which is correct for a list of commands and wrong for a list of settings. The panel
+is therefore built on `Popover` (portalled, `useAnchoredPosition` + `useDismiss` per §6.1),
+whose only dismissals are a genuine outside pointer-down, Escape, or an explicit close.
+Clicking a checkbox, a width segment or a font row is *inside* the panel and is not a
+dismissal — never re-introduce a click handler that closes the panel "just in case".
+
+Composition, top to bottom:
+
+- **Header** — title + a fuzzy **search field** (`lib/fuzzy.ts`, the same engine as the
+  block menus) that filters every row by label, group name and hand-written keywords, and
+  ranks by relevance. Search is navigation only: it never changes what a control does.
+- **Grouped sections** with small uppercase labels (`Page`, `Appearance`, `Actions`,
+  `Import & export`) and generous whitespace — hierarchy from type and space, not rules.
+- **Controls that fit the setting.** Boolean → a real checkbox (`Checkbox` in
+  `components/ui/Checkbox.tsx`, a box the user can hit, not an On/Off word). Mutually
+  exclusive → a **segmented radio group** (`components/ui/SegmentedControl.tsx`,
+  `role="radiogroup"`, arrow-key navigable) so the current value is visible without
+  opening anything. Many exclusive options (font) → an in-place **sub-view** with a back
+  affordance, the same pattern as the block-action menu.
+- **Active state is unambiguous**: `--thread-soft` fill + `--thread` text, plus a check or
+  a filled control — colour is never the only signal (§10).
+
+Keyboard: `/` or typing focuses search, `↑`/`↓` move through visible rows, `Enter`
+activates, `←`/`Escape` steps out of a sub-view before Escape closes the panel.
 
 ---
 
@@ -622,6 +689,16 @@ Reduced motion: all non-essential transitions collapse to opacity-only or none.
 Line icons, 1.5px stroke, from **lucide-react**, sized 16 (dense) / 18 (default) / 20 (headers).
 Icons inherit `currentColor` and default to `--ink-muted`, brightening to `--ink`/`--thread`
 on hover/active. Emoji (page icons) render at native colour.
+
+**File-format icons** (`components/ui/FileFormatIcon.tsx`) are the one deliberate exception
+and they are a *set*, not six borrowed glyphs. lucide has no Markdown/PDF/Word marks, and
+mixing a real PDF logo with a generic `FileText` would read as six different icon
+languages. Instead one drawn primitive — a document sheet with a folded corner, same
+1.5px stroke, same 16/18/20 sizes — carries a short format wordmark (`MD`, `TXT`, `JSON`,
+`DOC`, `PDF`, `HTML`) and a per-format accent tint, so `PDF` is identifiable at a glance
+while the six stay obviously one family. Accents: MD `#8a5cc4`, TXT `--ink-muted`,
+JSON `#c9a227`, DOC `#3f76c4`, PDF `#c4554d`, HTML `#cc772f` — the same swatch vocabulary
+as the block colour palette, with plain text left deliberately neutral.
 
 ---
 

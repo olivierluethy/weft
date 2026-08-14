@@ -513,8 +513,10 @@ function pickFile(accept: string): Promise<File | null> {
   });
 }
 
-/** Minimal RFC-4180-ish CSV parser (handles quoted fields + escaped quotes). */
-function parseCsv(text: string): string[][] {
+/** Minimal RFC-4180-ish CSV parser (handles quoted fields + escaped quotes).
+ * Exported so the page-level Import (features/export/importContent.ts) reuses the
+ * same parser as the slash-menu "Import CSV" action — one CSV implementation. */
+export function parseCsv(text: string): string[][] {
   const rows: string[][] = [];
   let row: string[] = [];
   let field = '';

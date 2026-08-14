@@ -1,5 +1,5 @@
 import { createReactBlockSpec } from '@blocknote/react';
-import { ChevronRight, Quote as QuoteIcon, RefreshCw, Sparkles, Home } from 'lucide-react';
+import { ChevronRight, RefreshCw, Sparkles, Home } from 'lucide-react';
 
 /** Horizontal divider. */
 export const Divider = createReactBlockSpec(
@@ -13,29 +13,32 @@ export const Divider = createReactBlockSpec(
   },
 );
 
-/** Blockquote — editable inline content with a left rule. */
+/** Blockquote — a woven thread-rule down the left and a serif italic body.
+ * `min-h-[1lh]` keeps the empty editable content one line tall so the caret
+ * always has a target on insert (see contentBlocks Bug A note on the toggle). */
 export const Quote = createReactBlockSpec(
   { type: 'quote', propSchema: {}, content: 'inline' },
   {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     render: ({ contentRef }: any) => (
-      <blockquote className="my-1 flex gap-2 border-l-[3px] border-thread pl-3 text-ink-muted">
-        <span contentEditable={false} className="mt-1 shrink-0"><QuoteIcon size={14} className="text-thread/60" /></span>
-        <div ref={contentRef} className="flex-1 italic" />
+      <blockquote className="my-1.5 border-l-[3px] border-thread/70 py-0.5 pl-4">
+        <div ref={contentRef} className="min-h-[1lh] text-[1.05em] italic leading-relaxed text-ink-muted" />
       </blockquote>
     ),
   },
 );
 
-/** Highlight / callout — tinted box with an emoji marker and editable body. */
+/** Highlight / callout — a clean, quiet card with an emoji marker and an
+ * editable body. Warm neutral surface with a hairline border (STYLEGUIDE §
+ * cards/callouts); the emoji sits on the first line of the text. */
 export const Callout = createReactBlockSpec(
   { type: 'callout', propSchema: { emoji: { default: '💡' } }, content: 'inline' },
   {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     render: ({ block, contentRef }: any) => (
-      <div className="my-1 flex gap-2.5 rounded-md border border-line bg-thread-soft/50 px-3 py-2">
-        <span className="select-none text-lg leading-tight" contentEditable={false}>{block.props.emoji}</span>
-        <div ref={contentRef} className="flex-1 text-ink" />
+      <div className="my-1.5 flex gap-3 rounded-lg border border-line bg-sunk px-4 py-3">
+        <span className="select-none text-[1.15em] leading-[1.5]" contentEditable={false}>{block.props.emoji}</span>
+        <div ref={contentRef} className="min-h-[1lh] min-w-0 flex-1 leading-relaxed text-ink" />
       </div>
     ),
   },
@@ -52,18 +55,22 @@ export const Toggle = createReactBlockSpec(
       const open = block.props.open as boolean;
       const level = block.props.level as number;
       const sizeCls = level === 1 ? 'text-2xl font-semibold' : level === 2 ? 'text-xl font-semibold' : level === 3 ? 'text-lg font-semibold' : '';
+      // Font size lives on the wrapper so the chevron (sized in `em`) scales with
+      // the heading level and its top-margin aligns to the first text line.
       return (
-        <div className="wf-toggle flex items-start gap-1" data-open={open ? 'true' : 'false'}>
+        <div className={`wf-toggle my-0.5 flex items-start gap-1.5 ${sizeCls}`} data-open={open ? 'true' : 'false'}>
           <button
             type="button"
             contentEditable={false}
             aria-label={open ? 'Collapse' : 'Expand'}
             onClick={() => editor.updateBlock(block, { props: { open: !open } })}
-            className="mt-0.5 shrink-0 rounded p-0.5 text-ink-faint transition hover:bg-sunk hover:text-ink"
+            className="mt-[0.15em] flex shrink-0 items-center justify-center rounded p-0.5 text-ink-faint transition hover:bg-sunk hover:text-ink"
           >
-            <ChevronRight size={16} className={open ? 'rotate-90 transition-transform' : 'transition-transform'} />
+            <ChevronRight
+              className={`h-[0.9em] max-h-6 w-[0.9em] max-w-6 ${open ? 'rotate-90' : ''} transition-transform`}
+            />
           </button>
-          <div ref={contentRef} className={`flex-1 ${sizeCls}`} />
+          <div ref={contentRef} className="min-h-[1lh] min-w-0 flex-1" />
         </div>
       );
     },
@@ -141,7 +148,7 @@ export const SyncedBlock = createReactBlockSpec(
         <div className="mb-1 flex items-center gap-1 text-2xs font-semibold uppercase tracking-wide text-madder" contentEditable={false}>
           <RefreshCw size={11} /> Synced
         </div>
-        <div ref={contentRef} className="text-ink" />
+        <div ref={contentRef} className="min-h-[1lh] text-ink" />
       </div>
     ),
   },
@@ -157,7 +164,7 @@ export const SmartNotes = createReactBlockSpec(
         <div className="mb-1 flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wide text-thread" contentEditable={false}>
           <Sparkles size={12} /> Smart Notes
         </div>
-        <div ref={contentRef} className="text-ink" />
+        <div ref={contentRef} className="min-h-[1lh] text-ink" />
       </div>
     ),
   },

@@ -19,6 +19,10 @@ import {
   Trash2,
   Type,
   Check,
+  Link2,
+  ClipboardCopy,
+  CopyPlus,
+  FolderInput,
 } from 'lucide-react';
 import { PAGE_WIDTH } from '@weft/shared';
 import type { PageDetail, Breadcrumb } from '@/lib/queries';
@@ -46,8 +50,13 @@ import {
   exportJson,
   exportDocx,
   exportPdf,
+  toMarkdown,
 } from '@/features/export/exporters';
 import { toast } from '@/lib/toast';
+import { useNavigate } from 'react-router-dom';
+import { api } from '@/lib/api';
+import { useInvalidate } from '@/lib/queries';
+import { MovePageDialog } from './MovePageDialog';
 
 export function PageHeader({
   page,
@@ -127,6 +136,40 @@ export function PageHeader({
   const [showShare, setShowShare] = useState(false);
   const [showCss, setShowCss] = useState(false);
   const [showComments, setShowComments] = useState(false);
+  const [moveOpen, setMoveOpen] = useState(false);
+
+  const navigate = useNavigate();
+  const invalidate = useInvalidate();
+
+  // ── "…" menu actions ───────────────────────────────────────────────────────
+  const copyLink = () => {
+    void navigator.clipboard.writeText(`${location.origin}/p/${page.id}`);
+    toast.success('Link copied');
+  };
+  const copyContents = () => {
+    void navigator.clipboard.writeText(toMarkdown(blocks));
+    toast.success('Page contents copied');
+  };
+  const duplicatePage = async () => {
+    try {
+      const { page: dup } = await api.post<{ page: { id: string } }>(`/pages/${page.id}/duplicate`);
+      await invalidate.tree(page.workspaceId);
+      toast.success('Page duplicated');
+      navigate(`/p/${dup.id}`);
+    } catch {
+      toast.error('Could not duplicate page');
+    }
+  };
+  const trashPage = async () => {
+    try {
+      await api.del(`/pages/${page.id}`);
+      await invalidate.tree(page.workspaceId);
+      toast.success('Moved to Trash');
+      navigate('/');
+    } catch {
+      toast.error('Could not move to Trash');
+    }
+  };
 
   const blocks = (Array.isArray(currentContent) ? currentContent : page.content) as any[];
 
@@ -297,6 +340,12 @@ export function PageHeader({
               },
               { label: 'Custom CSS', icon: <Code2 size={15} />, onClick: () => setShowCss(true), disabled: !editable },
               { divider: true, label: '' },
+              { label: 'Copy link', icon: <Link2 size={15} />, onClick: copyLink },
+              { label: 'Copy page contents', icon: <ClipboardCopy size={15} />, onClick: copyContents },
+              { label: 'Duplicate', icon: <CopyPlus size={15} />, onClick: () => void duplicatePage(), disabled: !editable },
+              { label: 'Move to', icon: <FolderInput size={15} />, onClick: () => setMoveOpen(true), disabled: !editable },
+              { label: 'Move to trash', icon: <Trash2 size={15} />, onClick: () => void trashPage(), danger: true, disabled: role === 'viewer' },
+              { divider: true, label: '' },
               ...exportItems.map((e) => ({ label: e.label, icon: <Download size={15} />, onClick: e.onClick })),
             ]}
           />
@@ -389,6 +438,9 @@ export function PageHeader({
           }}
           onClose={() => setShowCss(false)}
         />
+      )}
+      {moveOpen && (
+        <MovePageDialog pageId={page.id} workspaceId={page.workspaceId} onClose={() => setMoveOpen(false)} />
       )}
     </>
   );

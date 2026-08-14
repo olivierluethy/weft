@@ -365,3 +365,17 @@ body.wf-overlay-open .bn-side-menu {
   opacity: 0 !important;
   pointer-events: none !important;
 }
+
+/* Hover-state suppression (docs/STYLEGUIDE.md §6.1).
+ * BlockNote's side-menu plugin correctly computes when no block is hovered
+ * (pointer left the editor, or is above the first / below the last block) and
+ * emits `show:false`, but its React controller does not reliably unmount the
+ * floating handles in our config (default side menu disabled + custom
+ * SideMenuController). Result: the ＋ / ⠿ controls stay pinned to a block after
+ * the pointer moves away. We mirror the plugin's own `show` state onto this body
+ * class (see Editor.tsx) and hide the handles here — using BlockNote's correct
+ * computation, just closing the render gap. */
+body.wf-sidemenu-hidden .bn-side-menu {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}

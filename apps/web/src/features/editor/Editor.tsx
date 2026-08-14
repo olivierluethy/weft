@@ -164,6 +164,44 @@ export function Editor({
     };
   }, [editor]);
 
+  // Reliable hover-state hide for the block side menu (＋ / ⠿). BlockNote's plugin
+  // keeps the floating handles pinned to the last block after the pointer moves
+  // away: it emits `show:false` when no block is hovered, but its React controller
+  // does not reliably unmount them in our config (default side menu disabled +
+  // custom SideMenuController). So we drive visibility geometrically — the handles
+  // are shown only while the pointer is within the editor's content region (the
+  // text column plus the left gutter that holds the handles). Moving the pointer
+  // to the header, the sidebar, or the empty space above/below the document hides
+  // them, matching Notion. Native HTML5 drag doesn't fire `pointermove`, so a
+  // block drag is naturally unaffected; BlockNote still positions the handles on
+  // the hovered block within the region.
+  useEffect(() => {
+    if (!editable) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const tt = (editor as any)._tiptapEditor;
+    const root: HTMLElement | undefined = tt?.view?.dom;
+    if (!root) return;
+    let raf = 0;
+    const onMove = (e: MouseEvent) => {
+      if (raf) return;
+      const { clientX: x, clientY: y } = e;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        const b = root.getBoundingClientRect();
+        // Gutter (~44px) holds the ＋/⠿; a little right slack keeps the handle
+        // reachable when the pointer drifts just past the text column.
+        const inside = x >= b.left - 60 && x <= b.right + 8 && y >= b.top && y <= b.bottom;
+        document.body.classList.toggle('wf-sidemenu-hidden', !inside);
+      });
+    };
+    document.addEventListener('pointermove', onMove as EventListener, true);
+    return () => {
+      document.removeEventListener('pointermove', onMove as EventListener, true);
+      if (raf) cancelAnimationFrame(raf);
+      document.body.classList.remove('wf-sidemenu-hidden');
+    };
+  }, [editor, editable]);
+
   // Column drop-zone affordances. While a block is dragged, light up every column
   // as a drop zone (`.wf-dnd-active` on the PM root) and mark the column under the
   // pointer as the active target — or invalid, when a whole `columnList` is being

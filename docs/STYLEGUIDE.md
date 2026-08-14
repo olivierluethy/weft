@@ -371,6 +371,17 @@ tracks the child page live (renaming the child updates the block). Clicking navi
 the child. It is a void block (`contentEditable=false`) — same interaction language as the
 inline `@`-mention chip, promoted to block level.
 
+**Empty-page quick actions** — a getting-started affordance on a blank, editable page.
+It is **editor UI, never a document block**: rendered as a `contentEditable=false` sibling
+of the ProseMirror root, so it can't be typed into, saved, exported, or copied, and it
+disappears the instant the page gains real content (or the user picks "Text" / starts
+typing). It anchors just below the first line — complementing BlockNote's inline
+placeholder and the "/" menu rather than replacing them. A dezent hint line ("Start
+building — pick a block, press `/` for all, or just type."), then a compact 2/4-column grid
+of ~8 curated cards (`--surface`, `1px --line`, `rounded-md`, icon → `--thread` on hover)
+ordered write → structure → data. Each card runs the **real** insert verb from the shared
+block registry — the same one "/" uses — so it genuinely inserts the block.
+
 **Cards / callouts** — `--surface`, `1px --line`, `rounded-md`. Callouts tint their
 background from the chosen colour at ~10% and border at ~24%.
 

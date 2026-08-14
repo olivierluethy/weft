@@ -113,6 +113,7 @@ export function PageView() {
         editable={editable}
         stats={stats}
         currentContent={contentRef.current ?? page.content}
+        getLiveContent={() => contentRef.current ?? page.content}
         historyOpen={historyOpen}
         onHistoryOpenChange={setHistoryOpen}
         onUpdate={update}

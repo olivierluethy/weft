@@ -13,7 +13,9 @@ import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/mantine/style.css';
 import './editor.css';
 // Side-effect (via blockTypes): publishes the H1–H6 type scale as CSS custom properties.
+import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
+import { toast } from '@/lib/toast';
 import { hashHue } from '@/lib/utils';
 import { computeStats, docText, type DocStats } from './stats';
 import { WeftSideMenu, PageConvertDialog } from './WeftSideMenu';
@@ -28,6 +30,7 @@ import { useThemeStore } from '@/hooks/useTheme';
 import { useTree, useInvalidate } from '@/lib/queries';
 import { weftSchema } from './mention';
 import { SlashMenu } from './SlashMenu';
+import { MarqueeSelect } from './MarqueeSelect';
 import { WeftFormattingToolbar } from './FormattingToolbar';
 import { extractHeadings, type OutlineHeading } from './outline';
 
@@ -88,6 +91,7 @@ export function Editor({
   reorderRef?: MutableRefObject<ReorderSection | null>;
 }) {
   const { theme } = useThemeStore();
+  const navigate = useNavigate();
 
   // One Yjs doc + Hocuspocus provider per mounted page (component is keyed by pageId).
   const { doc, provider } = useMemo(() => {
@@ -146,8 +150,11 @@ export function Editor({
       workspaceId,
       pageId,
       invalidateTree: () => invalidate.tree(workspaceId),
+      toast: (msg: string) => toast.success(msg),
+      navigate,
+      currentUserName: user.name,
     }),
-    [editor, workspaceId, pageId, invalidate],
+    [editor, workspaceId, pageId, invalidate, navigate, user.name],
   );
 
   // Slash menu items come straight from the shared registry (insert verb).
@@ -340,6 +347,8 @@ export function Editor({
   );
 
   return (
+    <>
+    {editable && <MarqueeSelect editor={editor} />}
     <BlockNoteView
       editor={editor}
       editable={editable}
@@ -382,5 +391,6 @@ export function Editor({
         />
       )}
     </BlockNoteView>
+    </>
   );
 }

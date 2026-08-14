@@ -19,6 +19,10 @@ import {
   Trash2,
   Type,
   Check,
+  Link2,
+  ClipboardCopy,
+  CopyPlus,
+  FolderInput,
 } from 'lucide-react';
 import { PAGE_WIDTH } from '@weft/shared';
 import type { PageDetail, Breadcrumb } from '@/lib/queries';
@@ -46,8 +50,13 @@ import {
   exportJson,
   exportDocx,
   exportPdf,
+  toMarkdown,
 } from '@/features/export/exporters';
 import { toast } from '@/lib/toast';
+import { useNavigate } from 'react-router-dom';
+import { api } from '@/lib/api';
+import { useInvalidate } from '@/lib/queries';
+import { MovePageDialog } from './MovePageDialog';
 
 export function PageHeader({
   page,
@@ -56,6 +65,7 @@ export function PageHeader({
   editable,
   stats,
   currentContent,
+  getLiveContent,
   historyOpen,
   onHistoryOpenChange,
   onUpdate,
@@ -67,6 +77,8 @@ export function PageHeader({
   editable: boolean;
   stats: DocStats;
   currentContent: unknown;
+  /** Reads the freshest editor content at call time (refs don't re-render). */
+  getLiveContent?: () => unknown;
   historyOpen: boolean;
   onHistoryOpenChange: (open: boolean) => void;
   onUpdate: (partial: Record<string, unknown>) => void;
@@ -127,8 +139,49 @@ export function PageHeader({
   const [showShare, setShowShare] = useState(false);
   const [showCss, setShowCss] = useState(false);
   const [showComments, setShowComments] = useState(false);
+  const [moveOpen, setMoveOpen] = useState(false);
 
-  const blocks = (Array.isArray(currentContent) ? currentContent : page.content) as any[];
+  const navigate = useNavigate();
+  const invalidate = useInvalidate();
+
+  // ── "…" menu actions ───────────────────────────────────────────────────────
+  const copyLink = () => {
+    void navigator.clipboard.writeText(`${location.origin}/p/${page.id}`);
+    toast.success('Link copied');
+  };
+  const copyContents = () => {
+    void navigator.clipboard.writeText(toMarkdown(getBlocks()));
+    toast.success('Page contents copied');
+  };
+  const duplicatePage = async () => {
+    try {
+      const { page: dup } = await api.post<{ page: { id: string } }>(`/pages/${page.id}/duplicate`);
+      await invalidate.tree(page.workspaceId);
+      toast.success('Page duplicated');
+      navigate(`/p/${dup.id}`);
+    } catch {
+      toast.error('Could not duplicate page');
+    }
+  };
+  const trashPage = async () => {
+    try {
+      await api.del(`/pages/${page.id}`);
+      await invalidate.tree(page.workspaceId);
+      toast.success('Moved to Trash');
+      navigate('/');
+    } catch {
+      toast.error('Could not move to Trash');
+    }
+  };
+
+  // Read the freshest content at call time — `currentContent` is a stale ref
+  // snapshot from the last render, so live edits (for Copy contents / export)
+  // must come through the getter.
+  const getBlocks = (): any[] => {
+    const live = getLiveContent?.();
+    if (Array.isArray(live)) return live;
+    return (Array.isArray(currentContent) ? currentContent : page.content) as any[];
+  };
 
   // A freshly created (Untitled) page opens with the title focused, ready to type.
   useEffect(() => {
@@ -138,11 +191,11 @@ export function PageHeader({
 
   const font = page.fontFamily ?? 'serif';
   const exportItems = [
-    { label: 'Markdown (.md)', onClick: () => exportMarkdown(page.title, blocks) },
-    { label: 'HTML (.html)', onClick: () => exportHtmlFile(page.title, blocks, font) },
+    { label: 'Markdown (.md)', onClick: () => exportMarkdown(page.title, getBlocks()) },
+    { label: 'HTML (.html)', onClick: () => exportHtmlFile(page.title, getBlocks(), font) },
     { label: 'JSON (.json)', onClick: () => exportJson(page.title, page) },
-    { label: 'Word (.docx)', onClick: () => void exportDocx(page.title, blocks, font) },
-    { label: 'PDF (print)', onClick: () => exportPdf(page.title, blocks, font) },
+    { label: 'Word (.docx)', onClick: () => void exportDocx(page.title, getBlocks(), font) },
+    { label: 'PDF (print)', onClick: () => exportPdf(page.title, getBlocks(), font) },
   ];
 
   const setWidth = (delta: number) =>
@@ -297,6 +350,12 @@ export function PageHeader({
               },
               { label: 'Custom CSS', icon: <Code2 size={15} />, onClick: () => setShowCss(true), disabled: !editable },
               { divider: true, label: '' },
+              { label: 'Copy link', icon: <Link2 size={15} />, onClick: copyLink },
+              { label: 'Copy page contents', icon: <ClipboardCopy size={15} />, onClick: copyContents },
+              { label: 'Duplicate', icon: <CopyPlus size={15} />, onClick: () => void duplicatePage(), disabled: !editable },
+              { label: 'Move to', icon: <FolderInput size={15} />, onClick: () => setMoveOpen(true), disabled: !editable },
+              { label: 'Move to trash', icon: <Trash2 size={15} />, onClick: () => void trashPage(), danger: true, disabled: role === 'viewer' },
+              { divider: true, label: '' },
               ...exportItems.map((e) => ({ label: e.label, icon: <Download size={15} />, onClick: e.onClick })),
             ]}
           />
@@ -389,6 +448,9 @@ export function PageHeader({
           }}
           onClose={() => setShowCss(false)}
         />
+      )}
+      {moveOpen && (
+        <MovePageDialog pageId={page.id} workspaceId={page.workspaceId} onClose={() => setMoveOpen(false)} />
       )}
     </>
   );

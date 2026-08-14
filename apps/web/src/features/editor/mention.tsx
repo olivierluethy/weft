@@ -10,6 +10,7 @@ import { PageIcon } from './pickers/IconPicker';
 import { FontStyle } from './fontStyle';
 import { Heading6 } from './heading';
 import { PageLink } from './pageLink';
+import { weftCustomBlockSpecs, weftCustomInlineSpecs } from './blocks';
 
 /** Inline chip for an @page reference. Serialises as
  * `{ type: 'mention', props: { pageId, title } }` — the shape the server's
@@ -63,10 +64,12 @@ export const weftSchema = BlockNoteSchema.create({
     ...defaultBlockSpecs,
     heading: Heading6,
     pageLink: PageLink,
+    ...weftCustomBlockSpecs,
   },
   inlineContentSpecs: {
     ...defaultInlineContentSpecs,
     mention: Mention,
+    ...weftCustomInlineSpecs,
   },
   styleSpecs: {
     ...defaultStyleSpecs,

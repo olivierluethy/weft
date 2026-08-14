@@ -174,3 +174,10 @@
   font-size: 11px;
   border-radius: 4px 4px 4px 0;
 }
+
+/* Toggle list / toggle heading: hide nested children (the tree block-group)
+   when the toggle is collapsed. `.wf-toggle[data-open]` is set by the toggle
+   block's render (blocks/contentBlocks.tsx). */
+.bn-block:has(> .bn-block-content .wf-toggle[data-open='false']) > .bn-block-group {
+  display: none;
+}

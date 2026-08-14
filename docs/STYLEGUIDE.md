@@ -405,6 +405,16 @@ of ~8 curated cards (`--surface`, `1px --line`, `rounded-md`, icon → `--thread
 ordered write → structure → data. Each card runs the **real** insert verb from the shared
 block registry — the same one "/" uses — so it genuinely inserts the block.
 
+**Page header meta row** — a page's cover, icon and tags share **one horizontal row of
+equal-weight ghost pills** above the title (`Add cover · Add icon · Add tag`, `text-xs`
+`--ink-faint`, hover `--sunk`/`--ink`, `gap`), never stacked or overlapping. Each pill
+drops out the instant its item is set — a chosen cover paints the cover slot, an icon
+renders at 64px above the title, tags become chips below it — so the row only ever offers
+what's still missing (and collapses to nothing when all three exist). The row is revealed on
+hover/focus of the header (calm by default), but stays visible on a brand-new untitled page
+so first-run users can find it. This cleanly separates page **metadata** (the row) from page
+**content** (below the title).
+
 **Cards / callouts** — `--surface`, `1px --line`, `rounded-md`. Callouts tint their
 background from the chosen colour at ~10% and border at ~24%.
 

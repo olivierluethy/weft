@@ -34,6 +34,7 @@ import {
   type BlockTypeCtx,
 } from './blockTypes';
 import { useThemeStore } from '@/hooks/useTheme';
+import { useEditorPrefs } from '@/hooks/useEditorPrefs';
 import { useTree, useInvalidate } from '@/lib/queries';
 import { weftSchema } from './mention';
 import { SlashMenu } from './SlashMenu';
@@ -115,6 +116,7 @@ export function Editor({
   pageUpdatedAt?: string;
 }) {
   const { theme } = useThemeStore();
+  const spellcheck = useEditorPrefs((s) => s.spellcheck);
   const navigate = useNavigate();
 
   // One Yjs doc + Hocuspocus provider per mounted page (component is keyed by pageId).
@@ -193,6 +195,27 @@ export function Editor({
     if (!editable) return;
     return installEmptyDocRedoFallback(editor);
   }, [editor, editable]);
+
+  // Spellcheck toggle (app preference, persisted — see hooks/useEditorPrefs.ts).
+  // The `spellcheck` attribute governs the browser's native spellcheck, and it
+  // cascades: descendant editables that don't set their own value inherit it. We
+  // set it in two places so every note text field is covered without ever mutating
+  // ProseMirror's own managed nodes (doing so fights PM's mutation handling):
+  //   • the ProseMirror root — every block editable inside a note (paragraphs,
+  //     headings, lists, quotes, table cells, code, columns) inherits from it;
+  //   • the content wrapper — catches editable regions rendered *beside* the editor
+  //     (the empty-page quick-start band), which aren't under the PM root.
+  // The values persist across React re-renders (set imperatively, React doesn't
+  // manage them) and are re-applied on the next page (Editor is keyed by pageId).
+  // Page titles keep their own `spellCheck={false}` (PageHeader).
+  const contentWrapRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const value = String(spellcheck);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const root: HTMLElement | undefined = (editor as any)._tiptapEditor?.view?.dom;
+    root?.setAttribute('spellcheck', value);
+    contentWrapRef.current?.setAttribute('spellcheck', value);
+  }, [editor, spellcheck]);
 
   // Reliable hover-state hide for the block side menu (＋ / ⠿). BlockNote's plugin
   // keeps the floating handles pinned to the last block after the pointer moves
@@ -617,7 +640,7 @@ export function Editor({
     {editable && <MarqueeSelect editor={editor} />}
     {editable && <CodeLanguagePicker editor={editor} />}
     {editable && <CodeCopyButton editor={editor} />}
-    <div className="relative">
+    <div className="relative" ref={contentWrapRef}>
     <BlockNoteView
       editor={editor}
       editable={editable}

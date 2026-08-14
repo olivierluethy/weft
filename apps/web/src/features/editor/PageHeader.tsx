@@ -26,6 +26,7 @@ import {
   FolderInput,
   Copy,
   Pencil,
+  SpellCheck,
 } from 'lucide-react';
 import { PAGE_WIDTH } from '@weft/shared';
 import type { PageDetail, Breadcrumb } from '@/lib/queries';
@@ -61,6 +62,7 @@ import { api } from '@/lib/api';
 import { useInvalidate } from '@/lib/queries';
 import { MovePageDialog } from './MovePageDialog';
 import { ImportDialog } from './ImportDialog';
+import { useEditorPrefs } from '@/hooks/useEditorPrefs';
 
 /** Shared style for the horizontal page-header meta actions (Add cover / Add
  * icon / Add tag). Kept in sync with `META_PILL` in TagEditor.tsx (§13-14). */
@@ -169,6 +171,8 @@ export function PageHeader({
 
   const navigate = useNavigate();
   const invalidate = useInvalidate();
+  const spellcheck = useEditorPrefs((s) => s.spellcheck);
+  const toggleSpellcheck = useEditorPrefs((s) => s.toggleSpellcheck);
 
   // ── "…" menu actions ───────────────────────────────────────────────────────
   const copyLink = () => {
@@ -412,6 +416,13 @@ export function PageHeader({
               { label: 'Duplicate', icon: <CopyPlus size={15} />, onClick: () => void duplicatePage(), disabled: !editable },
               { label: 'Move to', icon: <FolderInput size={15} />, onClick: () => setMoveOpen(true), disabled: !editable },
               { label: 'Move to trash', icon: <Trash2 size={15} />, onClick: () => void trashPage(), danger: true, disabled: role === 'viewer' },
+              { divider: true, label: '' },
+              {
+                label: `Spellcheck: ${spellcheck ? 'On' : 'Off'}`,
+                icon: <SpellCheck size={15} />,
+                onClick: toggleSpellcheck,
+                checked: spellcheck,
+              },
               { divider: true, label: '' },
               {
                 label: 'Import…',

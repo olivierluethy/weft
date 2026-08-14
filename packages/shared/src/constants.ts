@@ -5,9 +5,6 @@ export const PAGE_WIDTH = {
   default: 720,
 } as const;
 
-/** Version-history snapshot debounce (ms). */
-export const SNAPSHOT_DEBOUNCE_MS = 2500;
-
 /** Words-per-minute used for reading-time estimates. */
 export const READING_WPM = 220;
 

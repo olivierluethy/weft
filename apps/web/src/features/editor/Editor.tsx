@@ -41,7 +41,6 @@ import { weftSchema } from './mention';
 import { SlashMenu } from './SlashMenu';
 import { WeftFormattingToolbar } from './FormattingToolbar';
 import { extractHeadings, type OutlineHeading } from './outline';
-import { SNAPSHOT_DEBOUNCE_MS } from '@weft/shared';
 
 const colorFor = (id: string) => `hsl(${hashHue(id)} 55% 45%)`;
 
@@ -207,8 +206,13 @@ export function Editor({
   };
 
   const saveTimer = useRef<ReturnType<typeof setTimeout>>();
-  const snapTimer = useRef<ReturnType<typeof setTimeout>>();
   const latest = useRef<unknown>(initialContent);
+  // Serialized snapshot of the note's state when it was OPENED (captured after the
+  // collab seed settles, so it reflects the normalized document, not the raw seed).
+  // A version snapshot is written on leave only when the current state differs from
+  // this baseline — i.e. only when the user actually edited. Merely viewing a page
+  // and switching away writes nothing. See the unmount effect below.
+  const openedBaseline = useRef<string | null>(null);
 
   // Seed the shared doc from the canonical JSON the first time it opens empty.
   // We seed on Yjs sync, but also on a short fallback timer so content always
@@ -236,6 +240,11 @@ export function Editor({
         }
       }
       done = true;
+      // Capture the opened state as the snapshot baseline. handleChange may have
+      // already run (the seed's replaceBlocks fires onChange), so we (re)sync
+      // `latest` here too — this is the reference point "no edits since open".
+      latest.current = editor.document;
+      openedBaseline.current = JSON.stringify(editor.document);
       onStats?.(computeStats(editor.document));
       onHeadings?.(extractHeadings(editor.document));
     };
@@ -249,13 +258,21 @@ export function Editor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor]);
 
-  // Persist on unmount (page-leave / blur equivalent).
+  // Leaving the note (this component is keyed by pageId, so switching pages/views
+  // unmounts it) is the ONLY trigger that writes a version-history snapshot — the
+  // Notion "save last state on switch" behaviour. We snapshot exactly once, and
+  // only when the current state differs from the state the note was opened with,
+  // so viewing a page without editing (or switching away twice with no change in
+  // between) creates no entry. Content itself still persists via onSave.
   useEffect(() => {
     return () => {
       clearTimeout(saveTimer.current);
-      clearTimeout(snapTimer.current);
       onSave(latest.current);
-      void api.post('/versions', { pageId, content: latest.current, kind: 'blur' }).catch(() => undefined);
+      const baseline = openedBaseline.current;
+      const edited = baseline !== null && JSON.stringify(latest.current) !== baseline;
+      if (edited) {
+        void api.post('/versions', { pageId, content: latest.current, kind: 'blur' }).catch(() => undefined);
+      }
       provider.destroy();
       doc.destroy();
     };
@@ -268,13 +285,9 @@ export function Editor({
     onStats?.(computeStats(docJson));
     onHeadings?.(extractHeadings(docJson));
 
+    // Persist the live content (not a history snapshot) shortly after edits stop.
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => onSave(docJson), 800);
-
-    clearTimeout(snapTimer.current);
-    snapTimer.current = setTimeout(() => {
-      void api.post('/versions', { pageId, content: docJson, kind: 'auto' }).catch(() => undefined);
-    }, SNAPSHOT_DEBOUNCE_MS);
   };
 
   // Section reorder driven by the outline's drag-and-drop. Works on the top-level

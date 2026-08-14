@@ -153,9 +153,12 @@ export function PathBar({
           const isLast = i === breadcrumbs.length - 1;
           if (isLast && titleEdit !== null) {
             return (
-              <span key={c.id} className="flex min-w-0 flex-1 items-center gap-1">
+              <span key={c.id} className="flex min-w-0 items-center gap-1">
                 {i > 0 && <ChevronRight size={13} className="shrink-0 text-ink-faint" />}
                 {c.icon && <PageIcon icon={c.icon} size={14} />}
+                {/* Constrained, chip-like rename field — no full-width stretch, and
+                    a soft on-brand focus (border tint + subtle shadow), never the
+                    hard indigo/black focus ring. */}
                 <input
                   ref={titleRef}
                   value={titleEdit}
@@ -172,7 +175,7 @@ export function PathBar({
                   }}
                   placeholder="Untitled"
                   spellCheck={false}
-                  className="min-w-0 flex-1 rounded bg-transparent px-1.5 py-0.5 text-sm font-medium text-ink outline-none ring-1 ring-thread placeholder:text-ink-faint"
+                  className="w-[min(420px,60vw)] min-w-0 max-w-full rounded-md border border-line-strong bg-surface px-2 py-1 text-sm font-medium text-ink shadow-sm outline-none transition-colors placeholder:text-ink-faint focus:border-thread/60 focus-visible:outline-none"
                 />
               </span>
             );

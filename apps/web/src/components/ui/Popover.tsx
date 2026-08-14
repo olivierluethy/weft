@@ -100,7 +100,15 @@ export function Popover({
               left: coords?.left ?? 0,
               visibility: coords ? 'visible' : 'hidden',
             }}
-            className={cn('z-overlay animate-[fade_.12s_ease] outline-none', className)}
+            // `focus-visible:shadow-none` matters: the panel is a `tabIndex=-1`
+            // container we focus programmatically, never a control, and the
+            // app-wide `:focus-visible` ring is a *box-shadow* — `outline-none`
+            // can't remove it, so a panel with no input of its own (a colour
+            // grid, a swatch list) would otherwise wear a dark indigo frame.
+            className={cn(
+              'z-overlay animate-[fade_.12s_ease] outline-none focus-visible:shadow-none',
+              className,
+            )}
           >
             {typeof children === 'function' ? children(() => setOpen(false)) : children}
           </div>

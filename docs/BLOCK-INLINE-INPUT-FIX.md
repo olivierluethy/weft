@@ -142,40 +142,52 @@ already uses successfully.
 - `apps/web/src/features/editor/blockTypes.tsx` — `focusInsertedInlineBlock` helper +
   guarded call in `insertBlockType`'s `simple` case.
 
-## 7a. Follow-up — one frame wasn't enough (Quote & Callout)
+## 7a. Correction — the real root cause was the DOM selection, not mount timing
 
-The re-assert above ran after **exactly one** `requestAnimationFrame`. That turned out
-to be a race, not a fix: a React node view can take **more than one commit/frame** to
-mount its editable. Whichever block committed inside that single frame landed (Toggle, in
-practice), while **Highlight/Callout and Quote committed a frame later** — so
-`setTextCursorPosition` still ran against a not-yet-mounted editable and the first
-keystroke still fell to the next line. The user reported exactly that split: Toggle fixed,
-Highlight and Quote still broken.
+Sections 4–6 above blamed *async mount timing* and two successive fixes tried to beat it
+by re-asserting `editor.setTextCursorPosition` — first after a single
+`requestAnimationFrame`, then on every frame until the model caret "landed". **Both were
+wrong.** Driving the real app headlessly (Chrome via CDP, inserting each block and typing a
+character *with nothing between the menu click and the keystroke*, like a fast user) showed
+the actual mechanism, and it is not what re-asserting the model caret can fix:
 
-The hardened fix keeps the same mechanism but removes the timing gamble: re-assert the
-caret **on every frame** and stop the instant the *DOM selection* actually lands inside the
-block (`[data-id]` contains `window.getSelection().anchorNode`), with a ~20-frame safety
-cap. Verifying the **DOM** side — not just the model position — is the point: the model
-selection was always correct; it was the DOM selection that lagged and misdirected the
-keystroke. This is deterministic no matter how many frames the node view takes to mount.
+- On insert, BlockNote's **model** selection *is* already inside the new block — the block
+  even carries `data-is-empty-and-focused="true"`. The content element exists within a
+  frame. So "the editable hasn't mounted yet / the model caret is wrong" is false.
+- What is wrong is the **browser DOM selection**. For an *empty* custom React node view,
+  ProseMirror never syncs the DOM caret into the content element; the DOM selection strands
+  at the block-container boundary (`DIV.bn-block`, offset 1), *outside* the editable.
+- `editor.setTextCursorPosition` **cannot move the DOM caret there** — on one frame or on
+  twenty. Re-asserting the model caret is a no-op for this failure, which is why the
+  first typed character, arriving at that boundary, spawned a **new block** (the CDP repro
+  literally produced a second, empty callout above the one holding the text).
+- A **mouse click** fixed it for users because a click drops a *native DOM caret* into the
+  content element. That is the whole content of the workaround.
+
+**The fix does programmatically what the click does:** once the node view has committed,
+drop a **collapsed DOM `Range`** into the block's empty content element and let ProseMirror
+adopt it (kept alongside `setTextCursorPosition` so model/undo state stays in agreement).
+Verified end-to-end with instant typing across repeated runs: Highlight, Quote **and**
+Toggle all land the text inline in a single block, while built-in blocks (Bullet List) and
+`content:'none'` blocks (Divider) are untouched by the call-site guard.
 
 ```ts
-function focusInsertedInlineBlock(editor, blockId) {
-  let frames = 0;
-  const landed = () => {
-    const el = document.querySelector(`[data-id="${CSS.escape(blockId)}"]`);
-    const sel = window.getSelection();
-    return !!(el && sel?.anchorNode && el.contains(sel.anchorNode));
-  };
-  const attempt = () => {
-    try { editor.focus(); editor.setTextCursorPosition(blockId, 'end'); }
-    catch { return; }
-    if (landed() || ++frames >= 20) return;
-    requestAnimationFrame(attempt);
-  };
-  requestAnimationFrame(attempt);
-}
+// after the node view mounts, mirror a click: place a real DOM caret in the content hole
+const hole = /* empty, editable content element inside the block's .bn-block-content */;
+editor.focus();
+editor.setTextCursorPosition(blockId, 'end');   // model caret (undo/history)
+const range = document.createRange();
+range.selectNodeContents(hole);
+range.collapse(true);
+const sel = window.getSelection();
+sel.removeAllRanges();
+sel.addRange(range);                            // browser caret — the part that was missing
 ```
+
+**Lesson:** the two earlier "definitive" writeups asserted success from the block *looking*
+right; neither was confirmed by actually typing a character. The bug was only understood
+once the exact user interaction (insert → immediate keystroke) was reproduced and the live
+DOM selection inspected.
 
 ## 8. Follow-ups (optional)
 

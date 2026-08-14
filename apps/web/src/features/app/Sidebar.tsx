@@ -6,6 +6,7 @@ import {
   Trash2,
   Share2,
   Network,
+  Activity,
   Settings,
   ChevronsUpDown,
   Check,
@@ -202,6 +203,7 @@ export function Sidebar({
 
       {/* Footer nav */}
       <div className="border-t border-line px-2 py-2">
+        <FooterLink icon={<Activity size={15} />} label="Activity" onClick={() => navigate('/activity')} />
         <FooterLink icon={<Network size={15} />} label="Graph view" onClick={() => navigate('/graph')} />
         <FooterLink icon={<Users size={15} />} label="Members" onClick={() => navigate('/members')} />
         <FooterLink icon={<Trash2 size={15} />} label="Trash" onClick={() => navigate('/trash')} />

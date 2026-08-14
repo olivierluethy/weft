@@ -16,6 +16,7 @@ const SidePeek = lazy(() =>
   import('@/features/editor/SidePeek').then((m) => ({ default: m.SidePeek })),
 );
 const SettingsView = lazy(() => import('@/features/settings/SettingsView'));
+const ActivityView = lazy(() => import('@/features/history/ActivityView'));
 const GraphView = lazy(() => import('@/features/graph/GraphView'));
 const TrashView = lazy(() => import('@/features/app/TrashView'));
 const MembersView = lazy(() => import('@/features/workspace/MembersView'));
@@ -124,6 +125,7 @@ function Shell() {
             <Route index element={<HomeView />} />
             <Route path="p/:pageId" element={<PageView />} />
             <Route path="w/:workspaceId" element={<HomeView />} />
+            <Route path="activity" element={<ActivityView />} />
             <Route path="settings/*" element={<SettingsView />} />
             <Route path="graph" element={<GraphView />} />
             <Route path="trash" element={<TrashView />} />

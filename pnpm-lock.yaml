@@ -156,6 +156,9 @@ importers:
       '@blocknote/react':
         specifier: ^0.25.1
         version: 0.25.2(@hocuspocus/provider@2.15.3(y-protocols@1.0.7(yjs@13.6.32))(yjs@13.6.32))(@types/hast@3.0.5)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(supports-color@8.1.1)
+      '@blocknote/xl-multi-column':
+        specifier: 0.25.1
+        version: 0.25.1(@hocuspocus/provider@2.15.3(y-protocols@1.0.7(yjs@13.6.32))(yjs@13.6.32))(@tiptap/pm@2.11.5)(@types/hast@3.0.5)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(supports-color@8.1.1)
       '@codemirror/lang-css':
         specifier: ^6.3.1
         version: 6.3.1
@@ -204,6 +207,9 @@ importers:
       mammoth:
         specifier: ^1.9.0
         version: 1.12.1
+      prosemirror-state:
+        specifier: 1.4.4
+        version: 1.4.4
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -391,6 +397,12 @@ packages:
 
   '@blocknote/react@0.25.2':
     resolution: {integrity: sha512-7n8LQfKiw4CImiWqrpetTLMcUZioA2uBUzkc7ZL9fvUCOA2mYf9B7gWfUpKmd8NJtu8m+FPYn0t5Ak8lE6G1dg==}
+    peerDependencies:
+      react: ^18.0 || ^19.0 || >= 19.0.0-rc
+      react-dom: ^18.0 || ^19.0 || >= 19.0.0-rc
+
+  '@blocknote/xl-multi-column@0.25.1':
+    resolution: {integrity: sha512-t9kuK84TLxtweQVbtYZzn83jbESdpynec9AdqWq9zWeWMOle+qC/QwA7syIlaEfQxTXMh3547Kg08mTSZxlvMw==}
     peerDependencies:
       react: ^18.0 || ^19.0 || >= 19.0.0-rc
       react-dom: ^18.0 || ^19.0 || >= 19.0.0-rc
@@ -4129,6 +4141,29 @@ snapshots:
       react-icons: 5.7.0(react@18.3.1)
     transitivePeerDependencies:
       - '@hocuspocus/provider'
+      - '@types/hast'
+      - highlight.js
+      - lowlight
+      - refractor
+      - sugar-high
+      - supports-color
+
+  '@blocknote/xl-multi-column@0.25.1(@hocuspocus/provider@2.15.3(y-protocols@1.0.7(yjs@13.6.32))(yjs@13.6.32))(@tiptap/pm@2.11.5)(@types/hast@3.0.5)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(supports-color@8.1.1)':
+    dependencies:
+      '@blocknote/core': 0.25.2(@hocuspocus/provider@2.15.3(y-protocols@1.0.7(yjs@13.6.32))(yjs@13.6.32))(@types/hast@3.0.5)(supports-color@8.1.1)
+      '@blocknote/react': 0.25.2(@hocuspocus/provider@2.15.3(y-protocols@1.0.7(yjs@13.6.32))(yjs@13.6.32))(@types/hast@3.0.5)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(supports-color@8.1.1)
+      '@tiptap/core': 2.11.5(@tiptap/pm@2.11.5)
+      prosemirror-model: 1.25.11
+      prosemirror-state: 1.4.4
+      prosemirror-tables: 1.8.5
+      prosemirror-transform: 1.12.0
+      prosemirror-view: 1.42.2
+      react: 18.3.1
+      react-dom: 18.3.1(react@18.3.1)
+      react-icons: 5.7.0(react@18.3.1)
+    transitivePeerDependencies:
+      - '@hocuspocus/provider'
+      - '@tiptap/pm'
       - '@types/hast'
       - highlight.js
       - lowlight

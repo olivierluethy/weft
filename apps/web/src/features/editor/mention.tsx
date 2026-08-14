@@ -5,6 +5,7 @@ import {
   defaultStyleSpecs,
 } from '@blocknote/core';
 import { createReactInlineContentSpec } from '@blocknote/react';
+import { withMultiColumn } from '@blocknote/xl-multi-column';
 import { useNavigate } from 'react-router-dom';
 import { PageIcon } from './pickers/IconPicker';
 import { FontStyle } from './fontStyle';
@@ -59,20 +60,26 @@ export const Mention = createReactInlineContentSpec(
  *  - `pageLink` block (sub-page reference, docs/STYLEGUIDE.md §6),
  *  - inline `mention` chip (@page reference → backlink),
  *  - inline `font` style (per-selection font family, docs/STYLEGUIDE.md §3.4). */
-export const weftSchema = BlockNoteSchema.create({
-  blockSpecs: {
-    ...defaultBlockSpecs,
-    heading: Heading6,
-    pageLink: PageLink,
-    ...weftCustomBlockSpecs,
-  },
-  inlineContentSpecs: {
-    ...defaultInlineContentSpecs,
-    mention: Mention,
-    ...weftCustomInlineSpecs,
-  },
-  styleSpecs: {
-    ...defaultStyleSpecs,
-    font: FontStyle,
-  },
-});
+// `withMultiColumn` adds BlockNote's official `columnList` / `column` container
+// blocks (real nested blocks + drag-and-drop), replacing the old visual-only
+// `columns` scaffold. Paired with `multiColumnDropCursor` + the multi-column
+// dictionary in Editor.tsx.
+export const weftSchema = withMultiColumn(
+  BlockNoteSchema.create({
+    blockSpecs: {
+      ...defaultBlockSpecs,
+      heading: Heading6,
+      pageLink: PageLink,
+      ...weftCustomBlockSpecs,
+    },
+    inlineContentSpecs: {
+      ...defaultInlineContentSpecs,
+      mention: Mention,
+      ...weftCustomInlineSpecs,
+    },
+    styleSpecs: {
+      ...defaultStyleSpecs,
+      font: FontStyle,
+    },
+  }),
+);

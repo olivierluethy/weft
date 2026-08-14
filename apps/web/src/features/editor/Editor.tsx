@@ -8,7 +8,9 @@ import {
   SideMenuController,
   type DefaultReactSuggestionItem,
 } from '@blocknote/react';
-import { filterSuggestionItems } from '@blocknote/core';
+import { filterSuggestionItems, locales as coreLocales } from '@blocknote/core';
+import { multiColumnDropCursor, locales as multiColumnLocales } from '@blocknote/xl-multi-column';
+import { createMultilineBlocksPlugin, multilineBlocksPluginKey } from './multilineBlocks';
 import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/mantine/style.css';
 import './editor.css';
@@ -112,6 +114,14 @@ export function Editor({
 
   const editor = useCreateBlockNote({
     schema: weftSchema,
+    // Multi-column drop cursor: shows a vertical insert bar so blocks can be dropped
+    // into / between columns. Paired with `withMultiColumn(weftSchema)` (mention.tsx).
+    dropCursor: multiColumnDropCursor,
+    dictionary: {
+      ...coreLocales.en,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      multi_column: multiColumnLocales.en as any,
+    },
     collaboration: {
       provider,
       fragment: doc.getXmlFragment('document'),
@@ -124,6 +134,30 @@ export function Editor({
       return location.origin + upload.url;
     },
   });
+
+  // DEV-only: expose the live editor for headless introspection / interaction tests.
+  // Never runs in production builds (`import.meta.env.DEV` is statically false there).
+  if (import.meta.env.DEV) {
+    (window as unknown as Record<string, unknown>).__weftEditor = editor;
+  }
+
+  // Notion-style multi-line Enter handling for Highlight/Quote. Registered before
+  // BlockNote's own Enter keymap so it can claim the key inside those blocks; a
+  // no-op everywhere else. See multilineBlocks.ts for the mechanism.
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const tt = (editor as any)._tiptapEditor;
+    if (!tt) return;
+    const plugin = createMultilineBlocksPlugin(editor);
+    tt.registerPlugin(plugin, (newPlugin: unknown, plugins: unknown[]) => [newPlugin, ...plugins]);
+    return () => {
+      try {
+        tt.unregisterPlugin(multilineBlocksPluginKey);
+      } catch {
+        /* editor already torn down */
+      }
+    };
+  }, [editor]);
 
   // `@` menu: insert a page-mention inline chip that the server turns into a backlink.
   const getMentionItems = (query: string): DefaultReactSuggestionItem[] =>

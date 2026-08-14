@@ -190,7 +190,7 @@ export function PageHeader({
               placeholder="Untitled"
               spellCheck={false}
               title={editable ? 'Edit title' : undefined}
-              className="min-w-0 flex-1 truncate border-none bg-transparent font-display text-base font-semibold text-ink outline-none placeholder:text-ink-faint disabled:cursor-default"
+              className="min-w-0 flex-1 truncate rounded-md border-none bg-transparent px-1 font-display text-base font-semibold text-ink outline-none transition-colors placeholder:text-ink-faint focus:bg-sunk/60 focus-visible:shadow-none focus-visible:outline-none disabled:cursor-default disabled:bg-transparent"
             />
           </div>
         ) : (
@@ -361,7 +361,7 @@ export function PageHeader({
             rows={1}
             placeholder="Untitled"
             spellCheck={false}
-            className="weft-title w-full cursor-text resize-none overflow-hidden border-none bg-transparent font-display text-[40px] font-semibold leading-tight tracking-tight text-ink outline-none placeholder:text-ink-faint disabled:cursor-default"
+            className="weft-title w-full cursor-text resize-none overflow-hidden border-none bg-transparent font-display text-[40px] font-semibold leading-tight tracking-tight text-ink outline-none placeholder:text-ink-faint focus:shadow-none focus-visible:shadow-none focus-visible:outline-none disabled:cursor-default"
           />
 
           <TagEditor page={page} editable={editable} />

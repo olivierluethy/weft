@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef, type MutableRefObject } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
 import * as Y from 'yjs';
 import { HocuspocusProvider } from '@hocuspocus/provider';
 import {
   useCreateBlockNote,
   SuggestionMenuController,
   FormattingToolbarController,
+  SideMenuController,
   getDefaultReactSlashMenuItems,
   type DefaultReactSuggestionItem,
 } from '@blocknote/react';
@@ -34,7 +35,8 @@ const HEADING_ICONS: Record<HeadingLevel, typeof Heading1> = {
 };
 import { api } from '@/lib/api';
 import { hashHue } from '@/lib/utils';
-import { computeStats, type DocStats } from './stats';
+import { computeStats, docText, type DocStats } from './stats';
+import { WeftSideMenu, PageConvertDialog, convertSpec, type ConvertTarget } from './WeftSideMenu';
 import { useThemeStore } from '@/hooks/useTheme';
 import { useTree, useInvalidate } from '@/lib/queries';
 import { weftSchema } from './mention';
@@ -334,6 +336,63 @@ export function Editor({
     };
   });
 
+  // ── Block-type conversion via the side-menu "+" ────────────────────────────
+  // A pending conversion of a Page (sub-page reference) that still has content —
+  // held here so the confirm dialog renders at the editor level, independent of
+  // the ephemeral hover side-menu that triggered it.
+  const [convertReq, setConvertReq] = useState<
+    { block: any; target: ConvertTarget; childId: string; title: string } | null
+  >(null);
+
+  // Replace a Page block with a paragraph/heading carrying the page's title, and
+  // move the now-unlinked child page to Trash (recoverable).
+  const performPageConvert = useCallback(
+    async (block: any, target: ConvertTarget, childId: string, title: string) => {
+      editor.updateBlock(block, {
+        ...convertSpec(target),
+        content: [{ type: 'text', text: title, styles: {} }],
+      } as never);
+      if (childId) {
+        await api.del(`/pages/${childId}`).catch(() => undefined);
+        await invalidate.tree(workspaceId);
+      }
+    },
+    [editor, invalidate, workspaceId],
+  );
+
+  const handleBlockConvert = useCallback(
+    async (block: any, target: ConvertTarget) => {
+      // Regular blocks convert in place, preserving their text.
+      if (block.type !== 'pageLink') {
+        editor.updateBlock(block, convertSpec(target) as never);
+        return;
+      }
+      const childId = (block.props?.pageId as string) || '';
+      const node = tree?.find((n) => n.id === childId);
+      const title = node?.title || (block.props?.title as string) || 'Untitled';
+      // Does the linked page hold anything worth warning about?
+      let hasContent = !!node?.hasChildren;
+      if (!hasContent && childId) {
+        try {
+          const res = await api.get<{ page: { content: unknown } }>(`/pages/${childId}`);
+          hasContent = docText(res.page?.content).trim().length > 0;
+        } catch {
+          /* if we can't read it, fall through to the confirm dialog to be safe */
+          hasContent = true;
+        }
+      }
+      if (hasContent) setConvertReq({ block, target, childId, title });
+      else void performPageConvert(block, target, childId, title);
+    },
+    [editor, tree, performPageConvert],
+  );
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const renderSideMenu = useCallback(
+    (menuProps: any) => <WeftSideMenu {...menuProps} onConvert={handleBlockConvert} />,
+    [handleBlockConvert],
+  );
+
   return (
     <BlockNoteView
       editor={editor}
@@ -342,15 +401,19 @@ export function Editor({
       theme={effectiveTheme(theme)}
       className="weft-page-content"
       // BlockNoteView always renders BlockNoteDefaultUI *alongside* these children,
-      // so leaving the defaults on would mount a second slash menu and a second
-      // formatting toolbar on top of ours. Disable the two we replace below; the
-      // default emoji picker (":") and side menu stay.
+      // so leaving the defaults on would mount a second menu on top of ours.
+      // Disable the three we replace below; the default emoji picker (":") stays.
       slashMenu={false}
       formattingToolbar={false}
+      sideMenu={false}
     >
       {/* Formatting toolbar: BlockNote defaults + the per-selection font-family
        * picker (docs/STYLEGUIDE.md §3.4). */}
       <FormattingToolbarController formattingToolbar={WeftFormattingToolbar} />
+
+      {/* Side menu: the "+" converts the current block's type (no blank-line
+       * insertion) and the handles are vertically centered (placement "left"). */}
+      <SideMenuController sideMenu={renderSideMenu} floatingOptions={{ placement: 'left' }} />
 
       {/* Slash menu: viewport-aware (BlockNote flips it up near the bottom) and
        * internally scrollable so every block category stays reachable. */}
@@ -360,6 +423,18 @@ export function Editor({
         suggestionMenuComponent={SlashMenu}
       />
       <SuggestionMenuController triggerCharacter="@" getItems={async (q) => getMentionItems(q)} />
+
+      {convertReq && (
+        <PageConvertDialog
+          pageTitle={convertReq.title}
+          onCancel={() => setConvertReq(null)}
+          onConfirm={() => {
+            const req = convertReq;
+            setConvertReq(null);
+            void performPageConvert(req.block, req.target, req.childId, req.title);
+          }}
+        />
+      )}
     </BlockNoteView>
   );
 }

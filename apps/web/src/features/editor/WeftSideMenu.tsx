@@ -1,35 +1,16 @@
 import { DragHandleButton } from '@blocknote/react';
-import { Plus, Type, Heading1, Heading2, Heading3, Check, AlertTriangle } from 'lucide-react';
+import { Plus, Check, AlertTriangle } from 'lucide-react';
 import { Popover } from '@/components/ui/Popover';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
+import { BLOCK_TYPE_DEFS, matchesBlock, type BlockTypeDef } from './blockTypes';
 
-/** A block-type the "+" menu can convert the current block into. */
-export type ConvertTarget = 'text' | 'h1' | 'h2' | 'h3';
-
-const CONVERT_OPTIONS: { key: ConvertTarget; label: string; sub: string; icon: typeof Type }[] = [
-  { key: 'text', label: 'Text', sub: 'Plain paragraph', icon: Type },
-  { key: 'h1', label: 'Heading 1', sub: 'Large section title', icon: Heading1 },
-  { key: 'h2', label: 'Heading 2', sub: 'Medium heading', icon: Heading2 },
-  { key: 'h3', label: 'Heading 3', sub: 'Small heading', icon: Heading3 },
-];
-
-/** The BlockNote update spec for a convert target (content is supplied separately). */
-export function convertSpec(target: ConvertTarget) {
-  if (target === 'text') return { type: 'paragraph' as const };
-  return { type: 'heading' as const, props: { level: Number(target[1]) as 1 | 2 | 3 } };
-}
-
-/** Is `block` the current selection already? Used to tick the active row.
- * Typed loosely: the editor's custom (weft) schema widens the block union. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function isActive(block: any, target: ConvertTarget): boolean {
-  if (target === 'text') return block.type === 'paragraph';
-  return block.type === 'heading' && block.props?.level === Number(target[1]);
-}
-
-/** Contents of the "+" popover: convert the current block's type (Notion-style). */
+/**
+ * Contents of the "+" popover: convert the current block into any other block
+ * type. Driven entirely by the shared `BLOCK_TYPE_DEFS` registry, so it lists
+ * exactly the same items (and groups) as the "/" slash menu — see blockTypes.tsx.
+ */
 function BlockConvertMenu({
   block,
   isPage,
@@ -38,50 +19,75 @@ function BlockConvertMenu({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   block: any;
   isPage: boolean;
-  onPick: (target: ConvertTarget) => void;
+  onPick: (def: BlockTypeDef) => void;
 }) {
+  // Group in first-appearance order (Headings → Basic blocks → Advanced → Media),
+  // matching the slash menu's grouped layout.
+  const groups: { name: string; defs: BlockTypeDef[] }[] = [];
+  for (const def of BLOCK_TYPE_DEFS) {
+    let g = groups.find((x) => x.name === def.group);
+    if (!g) {
+      g = { name: def.group, defs: [] };
+      groups.push(g);
+    }
+    g.defs.push(def);
+  }
+
   return (
-    <div className="w-64 overflow-hidden rounded-lg border border-line bg-surface p-1 shadow-lg">
-      <p className="px-2 pb-1 pt-1.5 text-2xs font-semibold uppercase tracking-wide text-ink-faint">
-        Turn into
-      </p>
-      {isPage && (
-        <p className="mb-1 px-2 text-2xs leading-snug text-ink-faint">
-          Converts this sub-page reference into a normal block.
-        </p>
-      )}
-      <div className="flex flex-col gap-0.5">
-        {CONVERT_OPTIONS.map((opt) => {
-          const active = isActive(block, opt.key);
-          const Icon = opt.icon;
-          return (
-            <button
-              key={opt.key}
-              data-convert={opt.key}
-              onClick={() => onPick(opt.key)}
-              className={cn(
-                'flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left transition',
-                active ? 'bg-thread-soft' : 'hover:bg-sunk',
-              )}
-            >
-              <span
-                className={cn(
-                  'flex h-7 w-7 shrink-0 items-center justify-center rounded-md border',
-                  active ? 'border-thread/40 bg-surface text-thread' : 'border-line-strong bg-paper text-ink-muted',
-                )}
-              >
-                <Icon size={15} />
-              </span>
-              <span className="flex min-w-0 flex-1 flex-col">
-                <span className={cn('truncate text-sm font-medium', active ? 'text-thread' : 'text-ink')}>
-                  {opt.label}
-                </span>
-                <span className="truncate text-2xs text-ink-faint">{opt.sub}</span>
-              </span>
-              {active && <Check size={15} className="shrink-0 text-thread" />}
-            </button>
-          );
-        })}
+    <div className="flex max-h-[min(380px,72vh)] w-72 flex-col overflow-hidden rounded-lg border border-line bg-surface shadow-lg">
+      <div className="border-b border-line px-3 pb-2 pt-2.5">
+        <p className="text-2xs font-semibold uppercase tracking-wide text-ink-faint">Turn into</p>
+        {isPage && (
+          <p className="mt-1 text-2xs leading-snug text-ink-faint">
+            Converts this sub-page reference into another block.
+          </p>
+        )}
+      </div>
+      <div className="flex-1 overflow-y-auto overscroll-contain p-1">
+        {groups.map((group) => (
+          <div key={group.name}>
+            <p className="px-2 pb-1 pt-2 text-2xs font-semibold uppercase tracking-wide text-ink-faint">
+              {group.name}
+            </p>
+            <div className="flex flex-col gap-0.5">
+              {group.defs.map((def) => {
+                const active = matchesBlock(def, block);
+                const Icon = def.Icon;
+                return (
+                  <button
+                    key={def.key}
+                    data-convert={def.key}
+                    onClick={() => onPick(def)}
+                    className={cn(
+                      'flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left transition',
+                      active ? 'bg-thread-soft' : 'hover:bg-sunk',
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'flex h-7 w-7 shrink-0 items-center justify-center rounded-md border',
+                        active
+                          ? 'border-thread/40 bg-surface text-thread'
+                          : 'border-line-strong bg-paper text-ink-muted',
+                      )}
+                    >
+                      <Icon size={15} />
+                    </span>
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span
+                        className={cn('truncate text-sm font-medium', active ? 'text-thread' : 'text-ink')}
+                      >
+                        {def.title}
+                      </span>
+                      <span className="truncate text-2xs text-ink-faint">{def.subtext}</span>
+                    </span>
+                    {active && <Check size={15} className="shrink-0 text-thread" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -90,12 +96,13 @@ function BlockConvertMenu({
 /**
  * Weft's block side menu. Replaces BlockNote's default "+" (which inserted a
  * blank paragraph on every click) with a menu that converts the CURRENT block's
- * type. The drag handle (⠿) keeps BlockNote's native drag + drag-handle menu.
- * Vertical centering is handled by the controller's `placement: 'left'`.
+ * type into any block type in the shared registry. The drag handle (⠿) keeps
+ * BlockNote's native drag + drag-handle menu. Vertical centering is handled by
+ * the controller's `placement: 'left'`.
  */
 export function WeftSideMenu(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  props: any & { onConvert: (block: any, target: ConvertTarget) => void },
+  props: any & { onConvert: (block: any, def: BlockTypeDef) => void },
 ) {
   const { block, freezeMenu, unfreezeMenu, onConvert } = props;
   const isPage = block.type === 'pageLink';
@@ -121,9 +128,9 @@ export function WeftSideMenu(
           <BlockConvertMenu
             block={block}
             isPage={isPage}
-            onPick={(target) => {
+            onPick={(def) => {
               close();
-              onConvert(block, target);
+              onConvert(block, def);
             }}
           />
         )}

@@ -212,9 +212,11 @@ The active face is driven by two tokens set **inline on the page container** —
 `--wf-body-font` (title, headings, body) and `--wf-title-font` (the page title, which keeps
 its Space Grotesk display look on the default face only). The container also keeps its
 `data-page-font="<key>"` attribute as a styling hook for custom CSS. The picker lives in
-the page **options panel** (§6.7) and in the action bar (`Type` icon); both list the faces
-rendered in themselves, grouped, with the active one checked. Exports (HTML/PDF/DOCX)
-carry the same face.
+**one place only** — the page options panel (§6.7), with the rest of the page settings. It
+lists the faces rendered in themselves, grouped, with the active one checked. There is no
+second entry point in the action bar: the page face is a setting, and a setting with two
+front doors is two states to keep in sync and two places to go looking. Exports
+(HTML/PDF/DOCX) carry the same face.
 
 Display type uses tight tracking (`-0.02em` on titles/H1). Body uses default tracking.
 

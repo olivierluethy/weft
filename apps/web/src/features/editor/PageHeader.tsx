@@ -11,7 +11,6 @@ import {
   MessageSquare,
   Move,
   Trash2,
-  Type,
   Copy,
   Pencil,
 } from 'lucide-react';
@@ -49,7 +48,6 @@ import { useInvalidate } from '@/lib/queries';
 import { MovePageDialog } from './MovePageDialog';
 import { ImportDialog } from './ImportDialog';
 import { PageOptionsPanel, type PageOptionsHandlers } from './PageOptionsPanel';
-import { FontList } from './FontList';
 import { DEFAULT_PAGE_FONT } from './pageFonts';
 
 /** Shared style for the horizontal page-header meta actions (Add cover / Add
@@ -334,21 +332,10 @@ export function PageHeader({
               <StatsPanel stats={stats} updatedAt={page.updatedAt} />
             </Popover>
           </Tooltip>
-          <Tooltip label="Font family">
-            <Popover
-              align="end"
-              trigger={<IconButton label="Font family" title={undefined}><Type size={16} /></IconButton>}
-            >
-              {/* Live, like everywhere else: picking a face re-faces the page
-                  and leaves the list open so the next one is one click away. */}
-              <FontList
-                value={page.fontFamily}
-                editable={editable}
-                onPick={(f) => onUpdate({ fontFamily: f })}
-                className="max-h-[min(460px,70vh)] w-72 rounded-xl border border-line bg-surface shadow-lg"
-              />
-            </Popover>
-          </Tooltip>
+          {/* No font button here. The page face is a page *setting*, and it
+              lives with the other page settings in the options panel (§6.7) —
+              two entry points meant two things to keep in sync and two places
+              to look. */}
           <Tooltip label={page.isFavorite ? 'Remove from favorites' : 'Add to favorites'}>
             <IconButton
               label={page.isFavorite ? 'Unfavorite' : 'Favorite'}

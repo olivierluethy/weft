@@ -5,9 +5,10 @@ import { fuzzyFilter } from '@/lib/fuzzy';
 import { PAGE_FONTS, pageFont, pageFontsByGroup, type PageFontDef } from './pageFonts';
 
 /**
- * The page font picker — one component, used by the `Type` button in the page
- * action bar and by the Font sub-view of the page options panel (§6.7), so the
- * two can never drift apart.
+ * The page font picker — the Font sub-view of the page options panel (§6.7),
+ * and the only place the page face can be changed. It was briefly also a `Type`
+ * button in the action bar; two entry points to one setting is two things to
+ * keep in sync, so the setting now lives with the other page settings.
  *
  * Every face renders **in itself**: the specimen, the name and the group line
  * all use the font they offer, which is the only honest way to choose type.

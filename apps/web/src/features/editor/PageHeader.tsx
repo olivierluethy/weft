@@ -23,6 +23,8 @@ import {
   ClipboardCopy,
   CopyPlus,
   FolderInput,
+  Copy,
+  Pencil,
 } from 'lucide-react';
 import { PAGE_WIDTH } from '@weft/shared';
 import type { PageDetail, Breadcrumb } from '@/lib/queries';
@@ -140,6 +142,14 @@ export function PageHeader({
   const [showCss, setShowCss] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
+  // Path-edit mode is owned here (not inside PathBar) so the "Edit path" control
+  // can live in the persistent header cluster and open it at any scroll depth.
+  const [pathEditing, setPathEditing] = useState(false);
+  const pathString = breadcrumbs.map((c) => c.title || 'Untitled').join(' / ');
+  const copyPath = () => {
+    void navigator.clipboard.writeText(pathString);
+    toast.success('Path copied');
+  };
 
   const navigate = useNavigate();
   const invalidate = useInvalidate();
@@ -230,7 +240,18 @@ export function PageHeader({
             : 'color-mix(in srgb, var(--paper) 72%, transparent)',
         }}
       >
-        {scrolled ? (
+        {/* Left region. Path-edit mode wins at any scroll depth (so "Edit path"
+            works from the compact header too); otherwise breadcrumb at rest,
+            compact editable title once scrolled. */}
+        {pathEditing ? (
+          <PathBar
+            breadcrumbs={breadcrumbs}
+            editable={editable}
+            editing
+            onEditingChange={setPathEditing}
+            onRenameCurrent={(t) => onUpdate({ title: t })}
+          />
+        ) : scrolled ? (
           <div className="flex min-w-0 flex-1 items-center gap-1.5">
             {page.icon && <PageIcon icon={page.icon} size={18} />}
             <input
@@ -250,8 +271,28 @@ export function PageHeader({
           <PathBar
             breadcrumbs={breadcrumbs}
             editable={editable}
+            editing={false}
+            onEditingChange={setPathEditing}
             onRenameCurrent={(t) => onUpdate({ title: t })}
           />
+        )}
+
+        {/* Persistent path actions — part of the page navigation, so they must
+            stay reachable whatever the scroll depth (report §16–20). Hidden only
+            while actively editing the path (PathBar shows its own Go/Cancel). */}
+        {!pathEditing && (
+          <div className="flex shrink-0 items-center gap-0.5">
+            <Tooltip label="Copy path">
+              <IconButton label="Copy path" title={undefined} onClick={copyPath}>
+                <Copy size={15} />
+              </IconButton>
+            </Tooltip>
+            <Tooltip label="Edit path">
+              <IconButton label="Edit path" title={undefined} onClick={() => setPathEditing(true)}>
+                <Pencil size={15} />
+              </IconButton>
+            </Tooltip>
+          </div>
         )}
 
         <div className="flex shrink-0 items-center gap-0.5">

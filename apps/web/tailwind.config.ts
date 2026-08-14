@@ -58,6 +58,23 @@ const config: Config = {
         standard: 'cubic-bezier(.2,.6,.2,1)',
         enter: 'cubic-bezier(.4,0,.2,1)',
       },
+      // Single, documented stacking scale (docs/STYLEGUIDE.md §6.1). Every
+      // overlay uses one of these named layers instead of an ad-hoc `z-[n]`,
+      // so layering is decided once and stays consistent. Floating layers
+      // (menus/popovers/tooltips/toasts) live far above document chrome and,
+      // crucially, are all rendered through a portal to <body> so no
+      // stacking context (a `sticky`/`backdrop-blur` bar, a `transform`
+      // ancestor) can ever trap them below sibling chrome.
+      zIndex: {
+        header: '20', // in-flow sticky page/section headers
+        'scrim-low': '30', // mobile sidebar backdrop, floating reopen button
+        sidebar: '40', // mobile sidebar drawer
+        peek: '60', // docked side-peek panel + its scrim
+        scrim: '70', // modals, dialogs, full-screen panels (portalled)
+        overlay: '1000', // menus, popovers, dropdowns, context menus (portalled)
+        tooltip: '1100', // tooltips (portalled)
+        toast: '1200', // toasts (portalled) — always on top
+      },
     },
   },
   plugins: [],

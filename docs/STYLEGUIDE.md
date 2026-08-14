@@ -304,6 +304,37 @@ Placeholder `--ink-faint`. Labels `text-xs` `--ink-muted` uppercase tracking `0.
 `shadow-md` (palette `shadow-lg`). Item height 32px, hover `--sunk`, active `--thread-soft`
 with `--thread` text. Section headers `text-2xs` `--ink-faint` uppercase.
 
+### 6.1 Overlay & stacking architecture
+
+Every floating surface — menus, popovers, dropdowns, context menus, tooltips, toasts,
+modals, full-screen panels and the side peek — is rendered through a **portal to
+`document.body`** (`components/ui/Portal.tsx`). This is not decoration: a floating panel
+rendered inline inherits the stacking context of its ancestors, and any `position: sticky`,
+`backdrop-filter`/`filter`, `transform`, `opacity < 1` or `z-index` on the way up traps it
+below sibling chrome (this was the real cause of the sidebar `＋`/`⋯` bleeding over the tag
+popover and the History panel). Portalling lifts each overlay to the root stacking context
+where a single, documented z-scale decides order:
+
+| Token (Tailwind `z-*`) | Value | Layer                                                   |
+| ---------------------- | ----- | ------------------------------------------------------- |
+| `z-header`             | 20    | in-flow sticky page/section headers                     |
+| `z-scrim-low`          | 30    | mobile sidebar backdrop, floating reopen button         |
+| `z-sidebar`            | 40    | mobile sidebar drawer                                    |
+| `z-peek`               | 60    | docked side-peek panel + its scrim                      |
+| `z-scrim`              | 70    | modals, dialogs, full-screen panels (portalled)         |
+| `z-overlay`            | 1000  | menus, popovers, dropdowns, context menus (portalled)   |
+| `z-tooltip`            | 1100  | tooltips (portalled)                                     |
+| `z-toast`              | 1200  | toasts (portalled) — always on top                      |
+
+Floating overlays sit **above** scrims so a menu opened from inside a modal still lands on
+top. Never introduce a raw `z-[n]`; pick a layer. **Positioning** is shared: anchored
+overlays use `useAnchoredPosition` (`components/ui/floating.ts`) — `position: fixed`,
+open below the trigger, flip above when there isn't room, shift horizontally to stay in
+the viewport with an 8px margin, and re-measure on scroll/resize. **Dismissal** is shared
+via `useDismiss`: Escape and outside-click (pointer outside both trigger and panel) close
+every overlay, with the same `fade .12s` entrance. Same shadow (`shadow-md`), same radius
+(`rounded-md`), same motion everywhere.
+
 **Sidebar** — `--sunk` background, `280px` default (resizable). Row height 30px, `text-sm`.
 Hover `--surface`; active page `--thread-soft` fill + `--thread` text + 2px `--thread` left bar.
 Favourites use a `--madder` star. The sidebar fills the full viewport height as a flex

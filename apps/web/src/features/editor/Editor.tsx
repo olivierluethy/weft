@@ -31,6 +31,7 @@ import { useTree, useInvalidate } from '@/lib/queries';
 import { weftSchema } from './mention';
 import { SlashMenu } from './SlashMenu';
 import { MarqueeSelect } from './MarqueeSelect';
+import { CodeLanguagePicker } from './CodeLanguagePicker';
 import { WeftFormattingToolbar } from './FormattingToolbar';
 import { extractHeadings, type OutlineHeading } from './outline';
 
@@ -318,6 +319,19 @@ export function Editor({
       // converting a normal block INTO a Page (def.spec.kind === 'page').
       if (block.type !== 'pageLink') {
         await convertBlockType(def, block, blockCtx, blockPlainText(block));
+        // The "+" popover stole focus from the editor; hand it back and drop the
+        // caret at the end of the converted block so the user can keep typing
+        // without re-clicking (the block keeps its id through updateBlock). Only
+        // for `simple` block types — `file`/`page`/`action` don't leave an
+        // editable text block under the cursor.
+        if (def.spec.kind === 'simple') {
+          try {
+            editor.focus();
+            editor.setTextCursorPosition(block.id, 'end');
+          } catch {
+            /* converted target isn't a text block — nothing to focus */
+          }
+        }
         return;
       }
       const childId = (block.props?.pageId as string) || '';
@@ -337,7 +351,7 @@ export function Editor({
       if (hasContent) setConvertReq({ block, def, childId, title });
       else void performPageConvert(block, def, childId, title);
     },
-    [blockCtx, tree, performPageConvert],
+    [editor, blockCtx, tree, performPageConvert],
   );
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -349,6 +363,7 @@ export function Editor({
   return (
     <>
     {editable && <MarqueeSelect editor={editor} />}
+    {editable && <CodeLanguagePicker editor={editor} />}
     <BlockNoteView
       editor={editor}
       editable={editable}

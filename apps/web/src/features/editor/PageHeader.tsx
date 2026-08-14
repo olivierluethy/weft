@@ -65,6 +65,7 @@ export function PageHeader({
   editable,
   stats,
   currentContent,
+  getLiveContent,
   historyOpen,
   onHistoryOpenChange,
   onUpdate,
@@ -76,6 +77,8 @@ export function PageHeader({
   editable: boolean;
   stats: DocStats;
   currentContent: unknown;
+  /** Reads the freshest editor content at call time (refs don't re-render). */
+  getLiveContent?: () => unknown;
   historyOpen: boolean;
   onHistoryOpenChange: (open: boolean) => void;
   onUpdate: (partial: Record<string, unknown>) => void;
@@ -147,7 +150,7 @@ export function PageHeader({
     toast.success('Link copied');
   };
   const copyContents = () => {
-    void navigator.clipboard.writeText(toMarkdown(blocks));
+    void navigator.clipboard.writeText(toMarkdown(getBlocks()));
     toast.success('Page contents copied');
   };
   const duplicatePage = async () => {
@@ -171,7 +174,14 @@ export function PageHeader({
     }
   };
 
-  const blocks = (Array.isArray(currentContent) ? currentContent : page.content) as any[];
+  // Read the freshest content at call time — `currentContent` is a stale ref
+  // snapshot from the last render, so live edits (for Copy contents / export)
+  // must come through the getter.
+  const getBlocks = (): any[] => {
+    const live = getLiveContent?.();
+    if (Array.isArray(live)) return live;
+    return (Array.isArray(currentContent) ? currentContent : page.content) as any[];
+  };
 
   // A freshly created (Untitled) page opens with the title focused, ready to type.
   useEffect(() => {
@@ -181,11 +191,11 @@ export function PageHeader({
 
   const font = page.fontFamily ?? 'serif';
   const exportItems = [
-    { label: 'Markdown (.md)', onClick: () => exportMarkdown(page.title, blocks) },
-    { label: 'HTML (.html)', onClick: () => exportHtmlFile(page.title, blocks, font) },
+    { label: 'Markdown (.md)', onClick: () => exportMarkdown(page.title, getBlocks()) },
+    { label: 'HTML (.html)', onClick: () => exportHtmlFile(page.title, getBlocks(), font) },
     { label: 'JSON (.json)', onClick: () => exportJson(page.title, page) },
-    { label: 'Word (.docx)', onClick: () => void exportDocx(page.title, blocks, font) },
-    { label: 'PDF (print)', onClick: () => exportPdf(page.title, blocks, font) },
+    { label: 'Word (.docx)', onClick: () => void exportDocx(page.title, getBlocks(), font) },
+    { label: 'PDF (print)', onClick: () => exportPdf(page.title, getBlocks(), font) },
   ];
 
   const setWidth = (delta: number) =>

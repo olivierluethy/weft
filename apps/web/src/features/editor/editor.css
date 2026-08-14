@@ -128,10 +128,52 @@
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 14px;
 }
+
+/* Code block — a quiet sunken panel with a legible language picker pinned
+   top-left. BlockNote ships the code block with a real <select> language
+   control, but its default CSS renders it white-on-transparent at opacity 0
+   (revealed only faintly on hover) — invisible on Weft's light `--sunk` panel.
+   We give the panel room at the top and make the picker a always-visible pill.
+   (Overrides @blocknote/core Block.css `[data-content-type='codeBlock']`.) */
 .weft-page-content .bn-block-content[data-content-type='codeBlock'] {
+  position: relative;
   background: var(--sunk);
+  color: var(--ink);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 10px;
+}
+.weft-page-content .bn-block-content[data-content-type='codeBlock'] > pre {
+  padding: 42px 18px 16px;
+}
+.weft-page-content .bn-block-content[data-content-type='codeBlock'] > div > select {
+  opacity: 1;
+  transition: background-color 0.12s ease, color 0.12s ease;
+  transition-delay: 0s;
+  top: 8px;
+  left: 10px;
+  padding: 3px 24px 3px 9px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 12px;
+  line-height: 1.2;
+  color: var(--ink-muted);
+  background-color: color-mix(in srgb, var(--surface) 65%, transparent);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239a948c' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 7px center;
+}
+.weft-page-content .bn-block-content[data-content-type='codeBlock'] > div > select:hover,
+.weft-page-content .bn-block-content[data-content-type='codeBlock']:hover > div > select,
+.weft-page-content .bn-block-content[data-content-type='codeBlock'] > div > select:focus {
+  opacity: 1;
+  color: var(--ink);
+  background-color: var(--surface);
+  border-color: var(--line);
+}
+.weft-page-content .bn-block-content[data-content-type='codeBlock'] > div > select > option {
+  color: var(--ink);
+  background: var(--surface);
 }
 
 /* Woven indent guides for nested blocks (STYLEGUIDE.md §5). Every block can be
@@ -177,7 +219,13 @@
 
 /* Toggle list / toggle heading: hide nested children (the tree block-group)
    when the toggle is collapsed. `.wf-toggle[data-open]` is set by the toggle
-   block's render (blocks/contentBlocks.tsx). */
-.bn-block:has(> .bn-block-content .wf-toggle[data-open='false']) > .bn-block-group {
+   block's render (blocks/contentBlocks.tsx).
+
+   Custom React block specs wrap their content in a `.react-renderer` element
+   (`.bn-block > .react-renderer > .bn-block-content > .wf-toggle`), so the match
+   must step through it. The full `>` chain also scopes the match to THIS block's
+   own toggle — a nested collapsed toggle inside the children can't satisfy the
+   direct-child path, so it only ever hides its own subtree. */
+.bn-block:has(> .react-renderer > .bn-block-content > .wf-toggle[data-open='false']) > .bn-block-group {
   display: none;
 }

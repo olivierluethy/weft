@@ -413,6 +413,12 @@ export function PageHeader({
         </div>
       </div>
 
+      {/* Cover + page meta share one hover scope (`group`) so the meta row
+          (Add cover / icon / tag) reveals when the pointer is anywhere over the
+          header — including the cover image itself, not only the title. Without
+          this the row was gated to the title block and appeared to hide "behind"
+          a cover, forcing pixel-hunting (§13-14). */}
+      <div className="group relative">
       {/* Cover */}
       <CoverArea page={page} editable={editable} onUpdate={onUpdate} />
 
@@ -421,7 +427,7 @@ export function PageHeader({
         className={cn('mx-auto px-4 sm:px-8 md:px-12', page.isFullWidth ? 'max-w-none' : '')}
         style={{ maxWidth: page.isFullWidth ? '100%' : (page.width || 720) + 96 }}
       >
-        <div className={cn('group relative', page.coverUrl ? '-mt-8' : 'pt-12')}>
+        <div className={cn('relative', page.coverUrl ? '-mt-8' : 'pt-12')}>
           {/* Horizontal meta actions — Add cover · Add icon · Add tag. Equal-weight
               ghost pills on one row above the title; each drops out the moment its
               item is set. Revealed on hover/focus of the header (Notion), but always
@@ -511,6 +517,7 @@ export function PageHeader({
 
           <TagEditor page={page} editable={editable} />
         </div>
+      </div>
       </div>
 
       {historyOpen && (

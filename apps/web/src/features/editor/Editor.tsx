@@ -13,6 +13,7 @@ import { multiColumnDropCursor, locales as multiColumnLocales } from '@blocknote
 import { createMultilineBlocksPlugin, multilineBlocksPluginKey } from './multilineBlocks';
 import { createEmptyBlockDeletePlugin, emptyBlockDeletePluginKey } from './emptyBlockDelete';
 import { createQuoteShortcutPlugin, quoteShortcutPluginKey } from './quoteShortcut';
+import { createToggleBehaviorPlugin, toggleBehaviorPluginKey } from './toggleBehavior';
 import { installEmptyDocRedoFallback } from './emptyDocRedo';
 import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/mantine/style.css';
@@ -169,11 +170,13 @@ export function Editor({
     tt.registerPlugin(createMultilineBlocksPlugin(editor), prepend);
     tt.registerPlugin(createEmptyBlockDeletePlugin(editor), prepend);
     tt.registerPlugin(createQuoteShortcutPlugin(editor), prepend);
+    tt.registerPlugin(createToggleBehaviorPlugin(editor), prepend);
     return () => {
       try {
         tt.unregisterPlugin(multilineBlocksPluginKey);
         tt.unregisterPlugin(emptyBlockDeletePluginKey);
         tt.unregisterPlugin(quoteShortcutPluginKey);
+        tt.unregisterPlugin(toggleBehaviorPluginKey);
       } catch {
         /* editor already torn down */
       }

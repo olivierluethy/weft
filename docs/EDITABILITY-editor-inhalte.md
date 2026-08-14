@@ -13,9 +13,9 @@ DOM-Vorhandensein — dieselbe Disziplin wie in [`POSTMORTEM-inline-caret-und-te
 |---|---|---|
 | 1 | Highlight/Quote mehrzeilig (Enter/Doppel-Enter) | ✅ **fertig & verifiziert** |
 | 2–5 | Columns als echte Block-Container (Drag&Drop) | ✅ **fertig & verifiziert** |
-| 6–10 | Database vollständig editierbar (Rows/Properties/Zellen) | 🔎 analysiert — Feature-Build nötig |
-| 11–12 | Gallery-Cards editierbar | 🔎 analysiert — Feature-Build nötig |
-| 13 | Charts auf editierbaren Daten | 🔎 analysiert — Feature-Build nötig |
+| 6–10 | Database vollständig editierbar (Rows/Properties/Zellen) | ✅ **fertig & verifiziert** |
+| 11–12 | Gallery-Cards editierbar | ✅ **fertig & verifiziert** |
+| 13 | Charts auf editierbaren Daten | ✅ **fertig & verifiziert** |
 
 > **Ehrliche Einordnung des Umfangs.** Punkt 1 war ein umgrenzter Editor-Bug und ist gelöst.
 > Punkte 2–13 sind **keine Bugfixes**, sondern der Ausbau von Komponenten, die laut
@@ -136,25 +136,47 @@ Columns sind echte Notion-artige Container: Blöcke reinschreiben, mehrere Blöc
 Slash-Commands, und Blöcke per Drag&Drop rein/raus/zwischen Spalten bewegen. Block-Kompatibilität
 regelt BlockNote nativ (verhindert z. B. columnList-in-column). Persistenz über Yjs.
 
-## Punkt 6–10 — Database editierbar 🔎 (analysiert, Feature-Build)
+## Punkt 6–10 — Database editierbar ✅
 
-**Befund:** `database`/`dataView` sind `content:'none'`-Baselines (reine Darstellung).
-Laut Projekt-Notiz: *„DB views/forms/tabs/synced/columns/mermaid are honest baselines —
-no live datastore."* Es gibt keinen persistierten Datenstand für Rows/Properties, daher
-sind erstellte Daten praktisch statisch.
+### 1)–3) Vorher / Fehler / Ursache
+`database`/`dataView` rendern eine **fest codierte** Sample-Zeilenliste (`content:'none'`,
+kein Editing). Alles „Hinzugefügte" war statisch — kein persistierter Datenstand.
 
-**Plan:** Datenmodell für die Database definieren (Rows/Properties als Block-Props oder
-Backend-Entität) → Bearbeitungs-UI (Zelle klicken→editieren, +Row, +Property, löschen) →
-Persistenz (Yjs oder Server) → Darstellung aus Daten ableiten. **Umfang:** großes Feature.
+### 4) Änderung
+Neues gemeinsames Datenmodell (`blocks/dataModel.tsx`): Rows/Columns leben als **JSON im
+`data`-Block-Prop** und werden über BlockNote → Yjs → Backend persistiert (lokal-first, kein
+separater Datastore). `useDataModel(block, editor)` liefert Mutatoren (setCell, addRow,
+deleteRow, addCol, renameCol, setColType, deleteCol), jede schreibt via `updateBlock`.
+`EditableTable`/`EditableGallery` rendern **aus** diesem Modell. `database`- und
+`dataView`-Blöcke bekamen ein `data`-Prop und nutzen die Komponenten. Zellen sind
+uncontrolled Inputs (Commit on Blur) → kein Fokusverlust; select-Zellen als farbige Chips,
+checkbox als Checkbox. Andere dataView-Varianten (board/list/…) fallen auf die editierbare
+Tabelle zurück (gleiches Datenmodell, damit alles editierbar bleibt).
 
-## Punkt 11–12 — Gallery-Cards editierbar 🔎 (analysiert, Feature-Build)
-Wie Database: Gallery ist eine Baseline-Darstellung ohne editierbares Card-Datenmodell.
-Plan analog (gemeinsames Datenmodell mit Database-Views wiederverwenden).
+### 5)–6) Test & Ergebnis (CDP, echte Klicks/Eingaben, nach Reload)
+```text
+Insert → Tabelle [Name,Status,Priority | Task A, Task B]
++New row → 3 Zeilen · Zelle editieren → "Task C" · Property umbenennen Status→State
++Property → "Property 4" · Zeile löschen → [Task B, Task C]
+Reload → identischer Zustand   ← persistiert
+```
+Rows/Properties/Zellen anlegen, bearbeiten, umbenennen, löschen — alles funktioniert und
+persistiert.
 
-## Punkt 13 — Charts auf editierbaren Daten 🔎 (analysiert, Feature-Build)
-**Befund:** Charts sind handgezeichnetes SVG mit statischen Daten (`blocks/chartBlock.tsx`).
-**Plan:** Daten als editierbare Block-Props/Datenmodell → Editier-UI (Werte-Tabelle) →
-Chart rendert reaktiv aus den Daten. **Umfang:** mittleres Feature.
+## Punkt 11–12 — Gallery-Cards editierbar ✅
+`dataView[view=gallery]` rendert `EditableGallery` aus demselben Datenmodell: Cards mit
+editierbarem Titel + Feldern, „+ New" legt eine Card an, Papierkorb löscht sie.
+**Test (CDP, nach Reload):** Insert → 2 Cards · +New → 3 · Card-Titel editieren → „Card C" ·
+erste Card löschen → [Task B, Card C] · Reload → identisch. Persistiert.
+
+## Punkt 13 — Charts auf editierbaren Daten ✅
+Charts hielten die Daten schon im `data`-Prop, aber editierbar nur über ein **rohes
+JSON-Textfeld** (versteckter Modus, contra Punkt 15). Ersetzt durch einen intuitiven
+Label/Wert-Zeileneditor (`ChartDataEditor` in `blocks/chartBlock.tsx`): Punkte bearbeiten,
+hinzufügen, löschen — jede Änderung schreibt das `data`-Prop, das Chart rendert **reaktiv**.
+**Test (CDP):** Line-Chart einfügen → Wert „Mon" 12→99 ändern → `data`-Prop aktualisiert
+**und** die SVG-Polyline neu berechnet (erster Punkt wandert an die Spitze = neues Maximum) →
+Punkt hinzufügen → Reload → persistiert.
 
 ---
 

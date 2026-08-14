@@ -2,6 +2,36 @@ packages:
   - "apps/*"
   - "packages/*"
 
+# BlockNote 0.25.2 is built and tested against TipTap 2.11.x, but its "^2.11.5"
+# ranges let pnpm resolve 2.27.x — a drift that breaks the custom React blocks'
+# contentDOM/contentRef wiring (typed text never enters the ProseMirror model,
+# and the caret-on-insert lands outside the block). Pin every @tiptap/* package
+# to a single 2.11.x version so a single TipTap is deduped across the tree.
+# See docs/KNOWN-ISSUE-custom-block-content-persistence.md.
+overrides:
+  "@tiptap/core": "2.11.5"
+  "@tiptap/pm": "2.11.5"
+  "@tiptap/react": "2.11.5"
+  "@tiptap/extension-bold": "2.11.5"
+  "@tiptap/extension-bubble-menu": "2.11.5"
+  "@tiptap/extension-code": "2.11.5"
+  "@tiptap/extension-collaboration": "2.11.5"
+  "@tiptap/extension-collaboration-cursor": "2.11.5"
+  "@tiptap/extension-floating-menu": "2.11.5"
+  "@tiptap/extension-gapcursor": "2.11.5"
+  "@tiptap/extension-hard-break": "2.11.5"
+  "@tiptap/extension-history": "2.11.5"
+  "@tiptap/extension-horizontal-rule": "2.11.5"
+  "@tiptap/extension-italic": "2.11.5"
+  "@tiptap/extension-link": "2.11.5"
+  "@tiptap/extension-paragraph": "2.11.5"
+  "@tiptap/extension-strike": "2.11.5"
+  "@tiptap/extension-table-cell": "2.11.5"
+  "@tiptap/extension-table-header": "2.11.5"
+  "@tiptap/extension-table-row": "2.11.5"
+  "@tiptap/extension-text": "2.11.5"
+  "@tiptap/extension-underline": "2.11.5"
+
 # Native packages whose install/build scripts are required (compiled bindings
 # and platform binaries). Approved explicitly for pnpm 11's secure defaults.
 onlyBuiltDependencies:

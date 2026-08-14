@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { formatDistanceToNow } from 'date-fns';
 import { Maximize2, X, ExternalLink } from 'lucide-react';
 import { usePage } from '@/lib/queries';
 import { Portal } from '@/components/ui/Portal';
@@ -112,12 +113,17 @@ export function SidePeek({ pageId, onClose }: { pageId: string; onClose: () => v
                 </div>
               )}
               <article className="weft-page-content mx-auto max-w-[680px] px-6 py-8 sm:px-10">
-                <div className="mb-4 flex items-center gap-3">
+                <div className="mb-2 flex items-center gap-3">
                   {page.icon && <PageIcon icon={page.icon} size={44} />}
                   <h1 className="font-display text-3xl font-semibold tracking-tight text-ink">
                     {page.title || 'Untitled'}
                   </h1>
                 </div>
+                {page.updatedAt && (
+                  <p className="mb-5 text-xs text-ink-faint">
+                    Edited {formatDistanceToNow(new Date(page.updatedAt), { addSuffix: true })}
+                  </p>
+                )}
                 <div dangerouslySetInnerHTML={{ __html: html }} />
               </article>
             </>

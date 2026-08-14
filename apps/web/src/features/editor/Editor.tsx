@@ -12,6 +12,7 @@ import { filterSuggestionItems, locales as coreLocales } from '@blocknote/core';
 import { multiColumnDropCursor, locales as multiColumnLocales } from '@blocknote/xl-multi-column';
 import { createMultilineBlocksPlugin, multilineBlocksPluginKey } from './multilineBlocks';
 import { createEmptyBlockDeletePlugin, emptyBlockDeletePluginKey } from './emptyBlockDelete';
+import { createQuoteShortcutPlugin, quoteShortcutPluginKey } from './quoteShortcut';
 import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/mantine/style.css';
 import './editor.css';
@@ -158,10 +159,12 @@ export function Editor({
     const prepend = (newPlugin: unknown, plugins: unknown[]) => [newPlugin, ...plugins];
     tt.registerPlugin(createMultilineBlocksPlugin(editor), prepend);
     tt.registerPlugin(createEmptyBlockDeletePlugin(editor), prepend);
+    tt.registerPlugin(createQuoteShortcutPlugin(editor), prepend);
     return () => {
       try {
         tt.unregisterPlugin(multilineBlocksPluginKey);
         tt.unregisterPlugin(emptyBlockDeletePluginKey);
+        tt.unregisterPlugin(quoteShortcutPluginKey);
       } catch {
         /* editor already torn down */
       }

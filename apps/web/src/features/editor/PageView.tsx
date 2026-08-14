@@ -29,6 +29,7 @@ export function PageView() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const contentRef = useRef<unknown>(null);
   const reorderRef = useRef<ReorderSection | null>(null);
+  const focusEditorRef = useRef<(() => void) | null>(null);
 
   const page = data?.page;
   const role = data?.role ?? 'viewer';
@@ -118,6 +119,7 @@ export function PageView() {
         onHistoryOpenChange={setHistoryOpen}
         onUpdate={update}
         onRestored={() => void refetch()}
+        onTitleEnter={() => focusEditorRef.current?.()}
       />
 
       <div className="mx-auto px-4 pb-40 sm:px-8 md:px-12" style={{ maxWidth, width: '100%' }}>
@@ -132,6 +134,7 @@ export function PageView() {
           onStats={setStats}
           onHeadings={setHeadings}
           reorderRef={reorderRef}
+          focusEditorRef={focusEditorRef}
         />
 
         <Backlinks pageId={pageId!} />

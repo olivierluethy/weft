@@ -199,6 +199,17 @@
   color: var(--ink-faint);
 }
 
+/* Calm empty canvas (§15-16): BlockNote injects a placeholder on ANY empty block
+ * (heading/list types show one whether focused or not). Suppress every block
+ * placeholder while the editor isn't focused, so an unfocused page is a clean
+ * content area; the hint reappears the moment the caret enters the editor. The
+ * paragraph "Enter text or type '/'…" hint is already gated to the focused block
+ * by BlockNote (data-is-empty-and-focused), so this only quiets the rest. */
+.weft-page-content .bn-editor:not(:focus-within)
+  .bn-inline-content:has(> .ProseMirror-trailingBreak:only-child)::before {
+  content: '' !important;
+}
+
 /* Page title follows the page font for the non-default faces (the serif default
  * keeps its Space Grotesk display look untouched). */
 [data-page-font='sans'] .weft-title {
@@ -342,4 +353,29 @@
 .weft-page-content .bn-editor[contenteditable='true'].wf-dnd-active .bn-block-column.wf-drop-invalid::after {
   color: var(--danger);
   font-weight: 600;
+}
+
+/* Global overlay-open suppression (docs/STYLEGUIDE.md §6.1).
+ * While any app overlay (Popover/Menu/Modal/Search) is open, hide the block
+ * side menu (＋ / ⠿) so its handles can never show beside or through the popup.
+ * The side menu lives in the left gutter — outside the popup's box — so z-index
+ * alone can't cover it; this is the systematic fix. The side menu's own convert
+ * popover opts out of the signal, so opening ＋ does not hide its own handle. */
+body.wf-overlay-open .bn-side-menu {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Hover-state suppression (docs/STYLEGUIDE.md §6.1).
+ * BlockNote's side-menu plugin correctly computes when no block is hovered
+ * (pointer left the editor, or is above the first / below the last block) and
+ * emits `show:false`, but its React controller does not reliably unmount the
+ * floating handles in our config (default side menu disabled + custom
+ * SideMenuController). Result: the ＋ / ⠿ controls stay pinned to a block after
+ * the pointer moves away. We mirror the plugin's own `show` state onto this body
+ * class (see Editor.tsx) and hide the handles here — using BlockNote's correct
+ * computation, just closing the render gap. */
+body.wf-sidemenu-hidden .bn-side-menu {
+  opacity: 0 !important;
+  pointer-events: none !important;
 }

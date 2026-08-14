@@ -302,7 +302,12 @@ Placeholder `--ink-faint`. Labels `text-xs` `--ink-muted` uppercase tracking `0.
 
 **Menus / popovers / command palette** — `--surface`, `1px --line`, `rounded-md`,
 `shadow-md` (palette `shadow-lg`). Item height 32px, hover `--sunk`, active `--thread-soft`
-with `--thread` text. Section headers `text-2xs` `--ink-faint` uppercase.
+with `--thread` text. Section headers `text-2xs` `--ink-faint` uppercase. The **search
+palette's focus state** is on the whole surface, not the raw input: on `:focus-within` the
+card lifts (a softer, deeper shadow) and gains a subtle `--thread/25` ring, the search icon
+shifts to `--thread`, and the field divider tints `--thread/30` — a premium focus that reads
+as part of the design system, never a browser input outline. The trigger button (sidebar
+Search) uses a `--thread-soft` focus halo, matching the app focus language.
 
 ### 6.1 Overlay & stacking architecture
 
@@ -335,6 +340,19 @@ bleed over an app popover (this was the real cause of the page **emoji picker** 
 under the block `＋`/⠿ controls — not a missing z-index on the picker, but the app-overlay
 band starting at 1000, *below* BlockNote's 2000). The app band therefore starts at `z-scrim`
 5000. Do not place any app overlay inside 2000–4000.
+
+**Global "an overlay is open" signal.** Z-order alone cannot hide the editor's block
+handles: the BlockNote side menu (`＋` / `⠿`) lives in the **left margin gutter**, which is
+horizontally *outside* every popup's rectangle, so a higher-z popover never covers it — it
+just sits beside it. The fix is a suppression signal, not more z-index. Every shared overlay
+primitive (`Popover`, `Menu`, `Modal`, and the command palette / search) registers itself
+via `useOverlayOpen(open)` (`lib/overlaySignal.ts`), which reference-counts open overlays and
+toggles `body.wf-overlay-open`. While that class is present, `editor.css` hides the block
+side menu (`opacity:0; pointer-events:none`), so **no `＋`/`⠿` handle ever shows beside or
+through an open popup** — Tag, page-icon Emoji, Search, and every menu/modal alike. The one
+exception is the side menu's *own* `＋` convert popover, which opts out
+(`registerOverlay={false}`) because it is anchored to the handle and uses BlockNote's
+`freezeMenu` to stay pinned while open. This is the single, systematic rule for the whole app.
 
 Floating overlays sit **above** scrims so a menu opened from inside a modal still lands on
 top. Never introduce a raw `z-[n]`; pick a layer. **Positioning** is shared: anchored
@@ -383,14 +401,34 @@ inline `@`-mention chip, promoted to block level.
 
 **Empty-page quick actions** — a getting-started affordance on a blank, editable page.
 It is **editor UI, never a document block**: rendered as a `contentEditable=false` sibling
-of the ProseMirror root, so it can't be typed into, saved, exported, or copied, and it
+*after* the ProseMirror root, so it can't be typed into, saved, exported, or copied, and it
 disappears the instant the page gains real content (or the user picks "Text" / starts
-typing). It anchors just below the first line — complementing BlockNote's inline
-placeholder and the "/" menu rather than replacing them. A dezent hint line ("Start
-building — pick a block, press `/` for all, or just type."), then a compact 2/4-column grid
-of ~8 curated cards (`--surface`, `1px --line`, `rounded-md`, icon → `--thread` on hover)
-ordered write → structure → data. Each card runs the **real** insert verb from the shared
-block registry — the same one "/" uses — so it genuinely inserts the block.
+typing). It sits at the **bottom** of the editor area as a quiet quick-start band — a
+hairline `--line` divider, a small "Start building" label + hint ("pick a block, press `/`
+for all, or just type."), then a compact 2/4-column grid of ~8 curated cards (`--surface`,
+`1px --line`, `rounded-md`, icon → `--thread` on hover) ordered write → structure → data —
+so a calm editing area sits above and a fast on-ramp below, rather than a card crowding the
+first line. It aligns to the body text column (`px-[54px]`, matching `.bn-editor`'s
+`padding-inline`). Each card runs the **real** insert verb from the shared block registry —
+the same one "/" uses — so it genuinely inserts the block.
+
+**Content placeholder (calm canvas)** — the inline block placeholders are **focus-gated**.
+BlockNote injects a placeholder on any empty block (the paragraph "Enter text or type `/`…"
+only on the *focused* empty block, but heading/list types on any empty block regardless of
+focus). `editor.css` suppresses every block placeholder while the editor is not focused
+(`.bn-editor:not(:focus-within)`), so an unfocused page shows a clean, empty content area;
+the hint reappears the moment the caret enters the editor. This keeps a new page quiet until
+the writer engages with the body.
+
+**Page header meta row** — a page's cover, icon and tags share **one horizontal row of
+equal-weight ghost pills** above the title (`Add cover · Add icon · Add tag`, `text-xs`
+`--ink-faint`, hover `--sunk`/`--ink`, `gap`), never stacked or overlapping. Each pill
+drops out the instant its item is set — a chosen cover paints the cover slot, an icon
+renders at 64px above the title, tags become chips below it — so the row only ever offers
+what's still missing (and collapses to nothing when all three exist). The row is revealed on
+hover/focus of the header (calm by default), but stays visible on a brand-new untitled page
+so first-run users can find it. This cleanly separates page **metadata** (the row) from page
+**content** (below the title).
 
 **Cards / callouts** — `--surface`, `1px --line`, `rounded-md`. Callouts tint their
 background from the chosen colour at ~10% and border at ~24%.
@@ -448,6 +486,28 @@ where the feed's sticky bar carries a compact quick-range menu.
 The Workspace Overview (`HomeView`) mirrors the fast-answer intent with one-click
 quick-filter chips (Edited today/this week, Created this month/this year) — it
 does **not** duplicate the navigator.
+
+### 6.4 Version history panel
+
+The Version history dialog (`features/history/HistoryPanel.tsx`) is a left **timeline
+rail** + a right **word-diff pane**. The rail makes time orientation immediate:
+
+- **Strong day sections.** Each day is a section headed by a prominent primary label
+  (`Today` / `Yesterday` / weekday, `font-display text-base font-semibold --ink`) over a
+  secondary full date (`text-2xs --ink-faint`) and an edit count, with a hairline rule.
+  The header is sticky, so the current day stays named while scrolling. This replaces the
+  old tiny grey uppercase label — Today/Yesterday now read at a glance.
+- **Per-day activity ribbon.** Under each header, the day's snapshots collapse into an
+  hour-by-hour bar ribbon spanning the day's active hours. Bar height ∝ the count of
+  **real** snapshots in that hour (never synthetic); the busiest/selected hour is `--thread`,
+  others `--thread/45`, quiet hours a faint `--line/40` track. Bars are the scrubber:
+  clicking one selects that hour's latest snapshot, so an activity peak leads straight to
+  *what changed* in the diff pane. End labels mark the first/last active hour.
+- **Time → activity → change rows.** Each row leads with the time (`font-display`,
+  tabular), then the kind (Edited / Autosave / …) and word count, and a **word-delta chip**
+  (`+N` on `--diff-add-bg`, `−N` on `--diff-del-bg`, `±0` faint) derived from the real
+  stored word counts — no invented change descriptions. The diff pane and Restore are
+  unchanged.
 
 ### 6.3 Marquee multi-select
 

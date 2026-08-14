@@ -1,4 +1,3 @@
-import { useLayoutEffect, useRef, useState } from 'react';
 import { BLOCK_TYPE_DEFS, insertBlockType, type BlockTypeCtx } from './blockTypes';
 
 /** True when the document is effectively blank — nothing, or a single empty
@@ -31,14 +30,19 @@ const defByKey = (key: string) => BLOCK_TYPE_DEFS.find((d) => d.key === key);
 
 /**
  * Getting-started affordance shown on an empty, editable page. It is pure editor
- * UI — rendered as a sibling of the ProseMirror root with `contentEditable=false`,
- * so it is never a document block: it can't be typed into, saved, exported, or
- * copied. Each action runs the *real* insert verb from the shared block registry
- * (the same one the "/" menu uses), and the whole affordance disappears the
- * moment the document gains real content (the caller stops rendering it).
+ * UI — rendered as an in-flow sibling *after* the ProseMirror root with
+ * `contentEditable=false`, so it is never a document block: it can't be typed
+ * into, saved, exported, or copied. Each action runs the *real* insert verb from
+ * the shared block registry (the same one the "/" menu uses), and the whole
+ * affordance disappears the moment the document gains real content (the caller
+ * stops rendering it).
  *
- * Positioned just below the first line so it complements — rather than replaces —
- * BlockNote's own inline placeholder and the "/" workflow.
+ * It sits at the **bottom** of the editor area as a quiet quick-start band
+ * (a hairline divider + a small "Start building" label + a curated card grid),
+ * separating a calm editing area above from a fast on-ramp below (§20-22) — it
+ * complements, not replaces, BlockNote's inline placeholder and the "/" workflow.
+ * `px-[54px]` matches `.bn-editor`'s `padding-inline` so the band lines up with
+ * the body text column.
  */
 export function EmptyState({
   editor,
@@ -50,29 +54,6 @@ export function EmptyState({
   ctx: BlockTypeCtx;
   onDismiss: () => void;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [top, setTop] = useState<number | null>(null);
-
-  // Anchor beneath the first block so the card tracks the content, not a guess.
-  useLayoutEffect(() => {
-    const measure = () => {
-      const pm: HTMLElement | undefined = editor?._tiptapEditor?.view?.dom;
-      const parent = ref.current?.offsetParent as HTMLElement | null;
-      const firstBlock = pm?.querySelector('.bn-block-outer');
-      if (!parent || !firstBlock) return;
-      const fb = firstBlock.getBoundingClientRect();
-      const pr = parent.getBoundingClientRect();
-      setTop(fb.bottom - pr.top + 10);
-    };
-    measure();
-    const raf = requestAnimationFrame(measure);
-    window.addEventListener('resize', measure);
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener('resize', measure);
-    };
-  }, [editor]);
-
   const pick = async (key: string) => {
     const def = defByKey(key);
     if (!def) return;
@@ -92,20 +73,20 @@ export function EmptyState({
 
   return (
     <div
-      ref={ref}
       contentEditable={false}
       suppressContentEditableWarning
-      style={{ position: 'absolute', top: top ?? 0, left: 0, right: 0, visibility: top === null ? 'hidden' : 'visible' }}
-      className="pointer-events-auto select-none animate-[fade_.18s_ease]"
+      className="pointer-events-auto mt-8 select-none px-[54px] animate-[fade_.18s_ease]"
       // Belt-and-braces: never let this UI end up in copied document HTML.
       data-weft-ui="empty-state"
     >
-      <div className="max-w-[560px]">
-        <p className="mb-2 px-0.5 text-xs font-medium text-ink-faint">
-          Start building — pick a block, press <span className="kbd">/</span> for all, or just
-          type.
+      <div className="border-t border-line pt-5">
+        <p className="mb-2.5 flex flex-wrap items-center gap-x-1.5 text-2xs text-ink-faint">
+          <span className="font-semibold uppercase tracking-[0.08em] text-ink-muted">
+            Start building
+          </span>
+          <span>— pick a block, press <span className="kbd">/</span> for all, or just type.</span>
         </p>
-        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+        <div className="grid max-w-[620px] grid-cols-2 gap-1.5 sm:grid-cols-4">
           {QUICK_ACTIONS.map(({ key, label }) => {
             const def = defByKey(key);
             if (!def) return null;

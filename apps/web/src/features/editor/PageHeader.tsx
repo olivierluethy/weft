@@ -60,6 +60,11 @@ import { api } from '@/lib/api';
 import { useInvalidate } from '@/lib/queries';
 import { MovePageDialog } from './MovePageDialog';
 
+/** Shared style for the horizontal page-header meta actions (Add cover / Add
+ * icon / Add tag). Kept in sync with `META_PILL` in TagEditor.tsx (§13-14). */
+const META_PILL =
+  'inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-ink-faint transition hover:bg-sunk hover:text-ink';
+
 export function PageHeader({
   page,
   breadcrumbs,
@@ -72,6 +77,7 @@ export function PageHeader({
   onHistoryOpenChange,
   onUpdate,
   onRestored,
+  onTitleEnter,
 }: {
   page: PageDetail;
   breadcrumbs: Breadcrumb[];
@@ -85,6 +91,8 @@ export function PageHeader({
   onHistoryOpenChange: (open: boolean) => void;
   onUpdate: (partial: Record<string, unknown>) => void;
   onRestored: () => void;
+  /** Enter in the title jumps the caret into the editor body (Notion-style). */
+  onTitleEnter?: () => void;
 }) {
   const [title, setTitle] = useState(page.title);
   const titleRef = useRef<HTMLTextAreaElement>(null);
@@ -132,6 +140,7 @@ export function PageHeader({
     if (e.key === 'Enter') {
       e.preventDefault();
       e.currentTarget.blur(); // commit via onBlur
+      onTitleEnter?.(); // …then jump the caret into the body (Notion-style)
     } else if (e.key === 'Escape') {
       e.preventDefault();
       cancelRef.current = true;
@@ -404,6 +413,12 @@ export function PageHeader({
         </div>
       </div>
 
+      {/* Cover + page meta share one hover scope (`group`) so the meta row
+          (Add cover / icon / tag) reveals when the pointer is anywhere over the
+          header — including the cover image itself, not only the title. Without
+          this the row was gated to the title block and appeared to hide "behind"
+          a cover, forcing pixel-hunting (§13-14). */}
+      <div className="group relative">
       {/* Cover */}
       <CoverArea page={page} editable={editable} onUpdate={onUpdate} />
 
@@ -413,7 +428,63 @@ export function PageHeader({
         style={{ maxWidth: page.isFullWidth ? '100%' : (page.width || 720) + 96 }}
       >
         <div className={cn('relative', page.coverUrl ? '-mt-8' : 'pt-12')}>
-          {page.icon ? (
+          {/* Horizontal meta actions — Add cover · Add icon · Add tag. Equal-weight
+              ghost pills on one row above the title; each drops out the moment its
+              item is set. Revealed on hover/focus of the header (Notion), but always
+              shown on a brand-new (untitled) page so first-run users see them. */}
+          {editable &&
+            (!page.coverUrl || !page.icon || (page.tags?.length ?? 0) === 0) && (
+              <div
+                className={cn(
+                  'mb-2 flex flex-wrap items-center gap-0.5 transition-opacity duration-150',
+                  page.title
+                    ? 'opacity-0 focus-within:opacity-100 group-hover:opacity-100'
+                    : 'opacity-100',
+                )}
+              >
+                {!page.coverUrl && (
+                  <Popover
+                    trigger={
+                      <button id="weft-cover-trigger" className={META_PILL}>
+                        <ImagePlus size={13} /> Add cover
+                      </button>
+                    }
+                  >
+                    {(close) => (
+                      <CoverPicker
+                        workspaceId={page.workspaceId}
+                        onPick={(url) => {
+                          onUpdate({ coverUrl: url });
+                          close();
+                        }}
+                      />
+                    )}
+                  </Popover>
+                )}
+                {!page.icon && (
+                  <Popover
+                    trigger={
+                      <button className={META_PILL}>
+                        <Smile size={13} /> Add icon
+                      </button>
+                    }
+                  >
+                    {(close) => (
+                      <IconPicker
+                        workspaceId={page.workspaceId}
+                        onPick={(v) => {
+                          onUpdate({ icon: v });
+                          close();
+                        }}
+                      />
+                    )}
+                  </Popover>
+                )}
+                <TagEditor page={page} editable={editable} mode="bar" />
+              </div>
+            )}
+
+          {page.icon && (
             <Popover trigger={<button className="mb-1 inline-block rounded-md p-1 transition hover:bg-sunk"><PageIcon icon={page.icon} size={64} /></button>}>
               {(close) => (
                 <IconPicker
@@ -429,26 +500,6 @@ export function PageHeader({
                 />
               )}
             </Popover>
-          ) : (
-            editable && (
-              <Popover
-                trigger={
-                  <button className="mb-2 inline-flex items-center gap-1.5 rounded border border-line-strong bg-surface px-2.5 py-1 text-sm font-medium text-ink-muted transition hover:border-thread hover:text-thread">
-                    <Smile size={15} /> Add icon
-                  </button>
-                }
-              >
-                {(close) => (
-                  <IconPicker
-                    workspaceId={page.workspaceId}
-                    onPick={(v) => {
-                      onUpdate({ icon: v });
-                      close();
-                    }}
-                  />
-                )}
-              </Popover>
-            )
           )}
 
           <textarea
@@ -466,6 +517,7 @@ export function PageHeader({
 
           <TagEditor page={page} editable={editable} />
         </div>
+      </div>
       </div>
 
       {historyOpen && (
@@ -583,33 +635,9 @@ function CoverArea({
 }) {
   const [reposition, setReposition] = useState(false);
 
-  if (!page.coverUrl) {
-    if (!editable) return null;
-    return (
-      <div className="mx-auto flex px-12 pt-3" style={{ maxWidth: (page.width || 720) + 96 }}>
-        <Popover
-          trigger={
-            <button
-              id="weft-cover-trigger"
-              className="inline-flex items-center gap-1.5 rounded border border-line-strong bg-surface px-2.5 py-1 text-sm font-medium text-ink-muted transition hover:border-thread hover:text-thread"
-            >
-              <ImagePlus size={15} /> Add cover
-            </button>
-          }
-        >
-          {(close) => (
-            <CoverPicker
-              workspaceId={page.workspaceId}
-              onPick={(url) => {
-                onUpdate({ coverUrl: url });
-                close();
-              }}
-            />
-          )}
-        </Popover>
-      </div>
-    );
-  }
+  // No cover: the "Add cover" affordance lives in the header meta row (§13-14),
+  // so the cover slot itself renders nothing until an image is chosen.
+  if (!page.coverUrl) return null;
 
   return (
     <div className="group relative w-full overflow-hidden" style={{ height: COVER_HEIGHT }}>

@@ -19,6 +19,7 @@ import { useWorkspace } from './workspace';
 import { useThemeStore } from '@/hooks/useTheme';
 import { cn } from '@/lib/utils';
 import { toast } from '@/lib/toast';
+import { useOverlayOpen } from '@/lib/overlaySignal';
 import { highlight } from '@/features/search/highlight';
 import { jumpPath } from '@/features/search/jump';
 
@@ -155,6 +156,10 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, rowCount, active, showCommands, results, commands]);
 
+  // Register with the global overlay-open signal so the editor's block +/⠿
+  // handles hide while search is open (§6.1) — same rule as every other overlay.
+  useOverlayOpen(open);
+
   if (!open) return null;
 
   return (
@@ -162,9 +167,15 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
       className="fixed inset-0 z-scrim flex items-start justify-center bg-[rgba(33,31,28,.36)] p-4 pt-[12vh] backdrop-blur-[2px]"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="card w-full max-w-[600px] animate-[fade_.14s_ease] overflow-hidden shadow-lg">
-        <div className="flex items-center gap-2.5 border-b border-line px-4">
-          <Search size={17} className="text-ink-faint" />
+      {/* The whole palette is the search surface: on focus it lifts (softer, deeper
+          shadow) and gains a subtle thread ring — a premium focus state that reads
+          as part of the design system, not a default browser input outline. */}
+      <div className="card w-full max-w-[600px] animate-[fade_.14s_ease] overflow-hidden shadow-lg transition-shadow duration-200 focus-within:shadow-[0_24px_60px_-15px_rgba(33,31,28,0.28)] focus-within:ring-2 focus-within:ring-thread/25">
+        <div className="group flex items-center gap-2.5 border-b border-line px-4 transition-colors focus-within:border-thread/30">
+          <Search
+            size={17}
+            className="text-ink-faint transition-colors group-focus-within:text-thread"
+          />
           <input
             ref={inputRef}
             value={q}

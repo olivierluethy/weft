@@ -111,6 +111,7 @@ export function WeftSideMenu(
     <div className="bn-side-menu flex items-center gap-0.5">
       <Popover
         align="start"
+        registerOverlay={false}
         onOpenChange={(open) => (open ? freezeMenu() : unfreezeMenu())}
         trigger={
           <button

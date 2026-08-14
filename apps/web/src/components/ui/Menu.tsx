@@ -1,6 +1,7 @@
 import { useRef, useState, cloneElement, type ReactNode, type ReactElement } from 'react';
 import { cn } from '@/lib/utils';
 import { Portal } from './Portal';
+import { useOverlayOpen } from '@/lib/overlaySignal';
 import { useAnchoredPosition, useDismiss, type Align } from './floating';
 
 export interface MenuItem {
@@ -32,6 +33,8 @@ export function Menu({
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLSpanElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+
+  useOverlayOpen(open);
 
   const coords = useAnchoredPosition({ open, triggerRef, panelRef, align });
   useDismiss(open, () => setOpen(false), [triggerRef, panelRef]);

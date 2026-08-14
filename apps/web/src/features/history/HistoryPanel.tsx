@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { diffWords } from 'diff';
-import { format, isToday, isYesterday } from 'date-fns';
+import { format, getHours, isToday, isYesterday } from 'date-fns';
 import { History, RotateCcw, Download, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Portal } from '@/components/ui/Portal';
@@ -27,11 +27,118 @@ const KIND_LABEL: Record<string, string> = {
   restore: 'Before restore',
 };
 
-/** Group label for a day: Today / Yesterday / weekday + date. */
-function dayLabel(d: Date): string {
-  if (isToday(d)) return 'Today';
-  if (isYesterday(d)) return 'Yesterday';
-  return format(d, 'EEEE, d MMM yyyy');
+/** Prominent + secondary label for a day header (Notion-style day sections). */
+function dayParts(d: Date): { primary: string; secondary: string } {
+  if (isToday(d)) return { primary: 'Today', secondary: format(d, 'EEEE, MMMM d') };
+  if (isYesterday(d)) return { primary: 'Yesterday', secondary: format(d, 'EEEE, MMMM d') };
+  return { primary: format(d, 'EEEE'), secondary: format(d, 'MMMM d, yyyy') };
+}
+
+/** A single day's snapshots collapsed into an hour-by-hour activity ribbon.
+ *
+ * Each bar is one clock hour in the day's active span; its height is the count
+ * of real snapshots in that hour (never synthetic), the busiest hour drawn in
+ * the accent. Bars are the scrubber: clicking one selects that hour's latest
+ * snapshot, so an activity peak leads straight to *what happened* in the diff
+ * pane. */
+function DayRibbon({
+  items,
+  selectedId,
+  onPick,
+}: {
+  items: VersionMeta[];
+  selectedId: string | null;
+  onPick: (id: string) => void;
+}) {
+  // Bucket the day's snapshots by clock hour (newest-first within the group).
+  const byHour = new Map<number, { count: number; latestId: string }>();
+  for (const v of items) {
+    const h = getHours(new Date(v.createdAt));
+    const cur = byHour.get(h);
+    // items are newest-first, so the first one we see for an hour is its latest.
+    if (cur) cur.count += 1;
+    else byHour.set(h, { count: 1, latestId: v.id });
+  }
+  const hours = [...byHour.keys()];
+  const minH = Math.min(...hours);
+  const maxH = Math.max(...hours);
+  const maxCount = Math.max(...[...byHour.values()].map((b) => b.count));
+  const span: number[] = [];
+  for (let h = minH; h <= maxH; h += 1) span.push(h);
+
+  const label = (h: number) => `${String(h).padStart(2, '0')}:00`;
+  const selectedHour = selectedId
+    ? getHours(new Date(items.find((v) => v.id === selectedId)?.createdAt ?? 0))
+    : -1;
+
+  return (
+    <div className="mt-2 select-none">
+      <div className="flex h-9 items-end gap-[3px]">
+        {span.map((h) => {
+          const bucket = byHour.get(h);
+          const count = bucket?.count ?? 0;
+          const isSel = bucket && h === selectedHour;
+          const heightPct = count === 0 ? 0 : 24 + (count / maxCount) * 76; // 24–100%
+          return (
+            <button
+              key={h}
+              type="button"
+              disabled={!bucket}
+              onClick={() => bucket && onPick(bucket.latestId)}
+              title={
+                bucket
+                  ? `${label(h)} · ${count} ${count === 1 ? 'snapshot' : 'snapshots'}`
+                  : `${label(h)} · no activity`
+              }
+              aria-label={`${label(h)}, ${count} snapshots`}
+              className={cn(
+                'group relative flex h-full flex-1 items-end rounded-[3px] transition',
+                bucket ? 'cursor-pointer' : 'cursor-default',
+              )}
+            >
+              {/* faint full-height track so quiet hours still read as time */}
+              <span className="absolute inset-x-0 bottom-0 top-0 rounded-[3px] bg-line/40" />
+              <span
+                className={cn(
+                  'relative w-full rounded-[3px] transition-[height,background-color]',
+                  isSel
+                    ? 'bg-thread'
+                    : bucket
+                      ? 'bg-thread/45 group-hover:bg-thread/70'
+                      : 'bg-transparent',
+                )}
+                style={{ height: `${heightPct}%` }}
+              />
+            </button>
+          );
+        })}
+      </div>
+      <div className="mt-1 flex justify-between text-[10px] font-medium text-ink-faint">
+        <span>{label(minH)}</span>
+        {maxH !== minH && <span>{label(maxH)}</span>}
+      </div>
+    </div>
+  );
+}
+
+/** Real word change vs. the previous snapshot (positive = words added). */
+function DeltaChip({ delta }: { delta: number }) {
+  if (delta === 0) {
+    return <span className="shrink-0 text-2xs text-ink-faint">±0</span>;
+  }
+  const added = delta > 0;
+  return (
+    <span
+      className="shrink-0 rounded-sm px-1.5 py-0.5 text-2xs font-semibold tabular-nums"
+      style={{
+        background: added ? 'var(--diff-add-bg)' : 'var(--diff-del-bg)',
+        color: added ? 'var(--diff-add)' : 'var(--diff-del)',
+      }}
+    >
+      {added ? '+' : '−'}
+      {Math.abs(delta)}
+    </span>
+  );
 }
 
 /** Block-separated plain text — one line per top-level block — so the word diff
@@ -88,17 +195,37 @@ export function HistoryPanel({
   const hasPrevious = !!previousMeta;
   const effectiveMode = compareMode === 'previous' && !hasPrevious ? 'previous' : compareMode;
 
-  // Entries grouped under Today / Yesterday / date headers (Notion-style).
+  // Entries grouped under strong Today / Yesterday / weekday day sections.
   const groups = useMemo(() => {
-    const out: { label: string; items: VersionMeta[] }[] = [];
+    const out: { key: string; primary: string; secondary: string; items: VersionMeta[] }[] = [];
     for (const v of versions) {
-      const label = dayLabel(new Date(v.createdAt));
+      const d = new Date(v.createdAt);
+      const key = format(d, 'yyyy-MM-dd');
       const last = out[out.length - 1];
-      if (last && last.label === label) last.items.push(v);
-      else out.push({ label, items: [v] });
+      if (last && last.key === key) last.items.push(v);
+      else out.push({ key, ...dayParts(d), items: [v] });
     }
     return out;
   }, [versions]);
+
+  // Real word delta per snapshot vs. the previous one (list is newest-first).
+  const deltaById = useMemo(() => {
+    const m = new Map<string, number>();
+    for (let i = 0; i < versions.length; i += 1) {
+      const cur = versions[i]!;
+      const prev = versions[i + 1];
+      m.set(cur.id, cur.wordCount - (prev ? prev.wordCount : 0));
+    }
+    return m;
+  }, [versions]);
+
+  // Keep the selected row visible in the rail when picked from the ribbon.
+  const railRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!selected) return;
+    const row = railRef.current?.querySelector<HTMLElement>(`[data-vid="${selected}"]`);
+    row?.scrollIntoView({ block: 'nearest' });
+  }, [selected]);
 
   const { data: selectedVersion } = useQuery({
     queryKey: ['version', selected],
@@ -199,8 +326,8 @@ export function HistoryPanel({
         {/* Body: two panes, each scrolls on its own; the panel itself never grows. */}
         <div className="flex min-h-0 flex-1">
           {/* Timeline */}
-          <div className="flex w-[264px] shrink-0 flex-col border-r border-line bg-sunk/40">
-            <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
+          <div className="flex w-[288px] shrink-0 flex-col border-r border-line bg-sunk/40">
+            <div ref={railRef} className="min-h-0 flex-1 overflow-y-auto px-2.5 py-2.5">
               {versions.length === 0 ? (
                 <div className="flex h-full flex-col items-center justify-center px-4 text-center">
                   <History size={22} className="mb-2 text-ink-faint" />
@@ -211,41 +338,65 @@ export function HistoryPanel({
                 </div>
               ) : (
                 groups.map((group) => (
-                  <div key={group.label} className="mb-1">
-                    <p className="sticky top-0 z-10 bg-sunk/90 px-2 py-1.5 text-2xs font-semibold uppercase tracking-wide text-ink-faint backdrop-blur">
-                      {group.label}
-                    </p>
-                    <div className="space-y-0.5">
+                  <section key={group.key} className="mb-4 last:mb-1">
+                    {/* Strong day header — Today / Yesterday jump out at a glance. */}
+                    <div className="sticky top-0 z-10 -mx-2.5 mb-1 border-b border-line/70 bg-sunk/85 px-2.5 pb-2 pt-0.5 backdrop-blur">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <h3 className="font-display text-base font-semibold leading-tight text-ink">
+                          {group.primary}
+                        </h3>
+                        <span className="shrink-0 text-2xs font-medium text-ink-faint">
+                          {group.items.length} {group.items.length === 1 ? 'edit' : 'edits'}
+                        </span>
+                      </div>
+                      <p className="text-2xs font-medium text-ink-faint">{group.secondary}</p>
+                    </div>
+
+                    {/* Per-day activity ribbon (real snapshot counts, clickable). */}
+                    <DayRibbon items={group.items} selectedId={selected} onPick={setSelected} />
+
+                    <div className="mt-2 space-y-0.5">
                       {group.items.map((v) => {
                         const active = selected === v.id;
                         return (
                           <button
                             key={v.id}
+                            data-vid={v.id}
                             onClick={() => setSelected(v.id)}
                             className={cn(
-                              'w-full rounded-md border-l-2 px-2.5 py-2 text-left transition',
+                              'flex w-full items-center gap-2.5 rounded-md border-l-2 px-2.5 py-1.5 text-left transition',
                               active
                                 ? 'border-thread bg-thread-soft'
                                 : 'border-transparent hover:bg-sunk',
                             )}
                           >
-                            <div
+                            <span
                               className={cn(
-                                'font-display text-sm font-medium',
+                                'w-10 shrink-0 font-display text-sm font-semibold tabular-nums',
                                 active ? 'text-thread' : 'text-ink',
                               )}
                             >
                               {format(new Date(v.createdAt), 'HH:mm')}
-                            </div>
-                            <div className="mt-0.5 truncate text-xs text-ink-faint">
-                              {KIND_LABEL[v.kind] ?? v.kind} · {v.wordCount} words
-                              {v.author ? ` · ${v.author.name}` : ''}
-                            </div>
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span
+                                className={cn(
+                                  'block truncate text-xs font-medium',
+                                  active ? 'text-thread' : 'text-ink',
+                                )}
+                              >
+                                {KIND_LABEL[v.kind] ?? v.kind}
+                              </span>
+                              <span className="block truncate text-2xs text-ink-faint">
+                                {v.wordCount} words{v.author ? ` · ${v.author.name}` : ''}
+                              </span>
+                            </span>
+                            <DeltaChip delta={deltaById.get(v.id) ?? 0} />
                           </button>
                         );
                       })}
                     </div>
-                  </div>
+                  </section>
                 ))
               )}
             </div>

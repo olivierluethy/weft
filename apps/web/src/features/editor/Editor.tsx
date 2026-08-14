@@ -30,6 +30,7 @@ import { useThemeStore } from '@/hooks/useTheme';
 import { useTree, useInvalidate } from '@/lib/queries';
 import { weftSchema } from './mention';
 import { SlashMenu } from './SlashMenu';
+import { MarqueeSelect } from './MarqueeSelect';
 import { WeftFormattingToolbar } from './FormattingToolbar';
 import { extractHeadings, type OutlineHeading } from './outline';
 
@@ -346,6 +347,8 @@ export function Editor({
   );
 
   return (
+    <>
+    {editable && <MarqueeSelect editor={editor} />}
     <BlockNoteView
       editor={editor}
       editable={editable}
@@ -388,5 +391,6 @@ export function Editor({
         />
       )}
     </BlockNoteView>
+    </>
   );
 }

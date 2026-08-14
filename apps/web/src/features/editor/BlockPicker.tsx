@@ -30,6 +30,7 @@ export function BlockPicker({
   title,
   hint,
   placeholder = 'Search blocks…',
+  chrome = true,
 }: {
   onPick: (def: BlockTypeDef) => void;
   defs?: BlockTypeDef[];
@@ -40,6 +41,9 @@ export function BlockPicker({
   title?: string;
   hint?: string;
   placeholder?: string;
+  /** Draw the panel surface (border/radius/shadow). Off when it is nested inside
+   *  a panel that already draws one — two frames read as a bug. */
+  chrome?: boolean;
 }) {
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState(0);
@@ -117,7 +121,12 @@ export function BlockPicker({
   let flatIndex = -1; // running index across sections, aligned with flatDefs
 
   return (
-    <div className="flex max-h-[min(420px,74vh)] w-72 flex-col overflow-hidden rounded-md border border-line bg-surface shadow-md">
+    <div
+      className={cn(
+        'flex max-h-[min(420px,74vh)] flex-col overflow-hidden',
+        chrome ? 'w-72 rounded-md border border-line bg-surface shadow-md' : 'w-full',
+      )}
+    >
       {(title || hint) && (
         <div className="border-b border-line px-3 pb-2 pt-2.5">
           {title && (

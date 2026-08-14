@@ -83,6 +83,7 @@ export function Editor({
   onStats,
   onHeadings,
   reorderRef,
+  focusEditorRef,
 }: {
   pageId: string;
   workspaceId: string;
@@ -93,6 +94,9 @@ export function Editor({
   onStats?: (stats: DocStats) => void;
   onHeadings?: (headings: OutlineHeading[]) => void;
   reorderRef?: MutableRefObject<ReorderSection | null>;
+  /** Set by the editor to focus the body's first block (used by the title's
+   * Enter key so it jumps straight into the content). */
+  focusEditorRef?: MutableRefObject<(() => void) | null>;
 }) {
   const { theme } = useThemeStore();
   const navigate = useNavigate();
@@ -465,6 +469,25 @@ export function Editor({
     },
     [editor, blockCtx, tree, performPageConvert],
   );
+
+  // Expose "focus the first content block" so the page title's Enter key can jump
+  // straight into the body (Notion-style). Places the caret at the start of the
+  // first block; if the first block isn't a text block, just focuses the editor.
+  useEffect(() => {
+    if (!focusEditorRef) return;
+    focusEditorRef.current = () => {
+      try {
+        editor.focus();
+        const first = editor.document?.[0] as { id?: string } | undefined;
+        if (first?.id) editor.setTextCursorPosition(first.id, 'start');
+      } catch {
+        /* first block isn't a text block — focus alone is enough */
+      }
+    };
+    return () => {
+      if (focusEditorRef) focusEditorRef.current = null;
+    };
+  }, [editor, focusEditorRef]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const renderSideMenu = useCallback(

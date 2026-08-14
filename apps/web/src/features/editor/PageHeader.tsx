@@ -77,6 +77,7 @@ export function PageHeader({
   onHistoryOpenChange,
   onUpdate,
   onRestored,
+  onTitleEnter,
 }: {
   page: PageDetail;
   breadcrumbs: Breadcrumb[];
@@ -90,6 +91,8 @@ export function PageHeader({
   onHistoryOpenChange: (open: boolean) => void;
   onUpdate: (partial: Record<string, unknown>) => void;
   onRestored: () => void;
+  /** Enter in the title jumps the caret into the editor body (Notion-style). */
+  onTitleEnter?: () => void;
 }) {
   const [title, setTitle] = useState(page.title);
   const titleRef = useRef<HTMLTextAreaElement>(null);
@@ -137,6 +140,7 @@ export function PageHeader({
     if (e.key === 'Enter') {
       e.preventDefault();
       e.currentTarget.blur(); // commit via onBlur
+      onTitleEnter?.(); // …then jump the caret into the body (Notion-style)
     } else if (e.key === 'Escape') {
       e.preventDefault();
       cancelRef.current = true;

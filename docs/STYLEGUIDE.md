@@ -336,6 +336,19 @@ under the block `＋`/⠿ controls — not a missing z-index on the picker, but 
 band starting at 1000, *below* BlockNote's 2000). The app band therefore starts at `z-scrim`
 5000. Do not place any app overlay inside 2000–4000.
 
+**Global "an overlay is open" signal.** Z-order alone cannot hide the editor's block
+handles: the BlockNote side menu (`＋` / `⠿`) lives in the **left margin gutter**, which is
+horizontally *outside* every popup's rectangle, so a higher-z popover never covers it — it
+just sits beside it. The fix is a suppression signal, not more z-index. Every shared overlay
+primitive (`Popover`, `Menu`, `Modal`, and the command palette / search) registers itself
+via `useOverlayOpen(open)` (`lib/overlaySignal.ts`), which reference-counts open overlays and
+toggles `body.wf-overlay-open`. While that class is present, `editor.css` hides the block
+side menu (`opacity:0; pointer-events:none`), so **no `＋`/`⠿` handle ever shows beside or
+through an open popup** — Tag, page-icon Emoji, Search, and every menu/modal alike. The one
+exception is the side menu's *own* `＋` convert popover, which opts out
+(`registerOverlay={false}`) because it is anchored to the handle and uses BlockNote's
+`freezeMenu` to stay pinned while open. This is the single, systematic rule for the whole app.
+
 Floating overlays sit **above** scrims so a menu opened from inside a modal still lands on
 top. Never introduce a raw `z-[n]`; pick a layer. **Positioning** is shared: anchored
 overlays use `useAnchoredPosition` (`components/ui/floating.ts`) — `position: fixed`,

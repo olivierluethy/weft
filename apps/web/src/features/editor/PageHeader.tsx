@@ -153,8 +153,30 @@ export function PageHeader({
     // bar's containing block and unpin it as soon as the header scrolls past,
     // so the bar must be a direct child of the [data-page-scroll] container.
     <>
-      {/* Sticky action bar */}
-      <div className="sticky top-0 z-20 flex items-center gap-1 border-b border-line/60 bg-paper/80 py-2 pl-12 pr-3 backdrop-blur md:px-4">
+      {/* Sticky action bar. On scroll it "lifts": the translucent, near-borderless
+          resting bar becomes a solid surface plate with a hairline, a whisper-soft
+          shadow, and icons that firm from muted to full ink for contrast. The
+          `:not(.bg-thread-soft)` guard keeps toggled (thread-coloured) icons their
+          own colour. Everything transitions so the change reads as a smooth lift. */}
+      <div
+        className={cn(
+          'sticky top-0 z-20 flex items-center gap-1 py-2 pl-12 pr-3 backdrop-blur md:px-4',
+          'transition-[background-color,box-shadow,border-color] duration-200 ease-out',
+          scrolled
+            ? 'border-b border-line shadow-[0_4px_14px_-10px_rgba(33,31,28,0.35)] [&_button:not(.bg-thread-soft)]:text-ink'
+            : 'border-b border-line/40',
+        )}
+        // The semantic colour tokens are full `var(--x)` values, so Tailwind's
+        // `/opacity` modifier can't tint them (it emits an invalid rgb() and the
+        // background silently drops to transparent — the real cause of the old
+        // "grey on grey"). color-mix gives a genuine, theme-aware translucent
+        // plate: a light frost at rest, a near-solid surface once scrolled.
+        style={{
+          backgroundColor: scrolled
+            ? 'color-mix(in srgb, var(--surface) 94%, transparent)'
+            : 'color-mix(in srgb, var(--paper) 72%, transparent)',
+        }}
+      >
         {scrolled ? (
           <div className="flex min-w-0 flex-1 items-center gap-1.5">
             {page.icon && <PageIcon icon={page.icon} size={18} />}

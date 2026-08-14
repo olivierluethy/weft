@@ -94,8 +94,21 @@ export function useDismiss(
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (refsRef.current.some((r) => r.current?.contains(target))) return;
+      // Decide inside/outside from the event's composed path, captured at dispatch
+      // time. A menu item can re-render the panel *during* this same mousedown
+      // (e.g. opening a sub-view synchronously unmounts the clicked row); by the
+      // time this document-level listener runs, that row is already detached, so
+      // `contains(e.target)` would wrongly report "outside" and close the overlay.
+      // The composed path still holds the panel element itself (it never unmounts
+      // while open), so we match against it first and fall back to `contains`.
+      const path = typeof e.composedPath === 'function' ? e.composedPath() : [];
+      const target = e.target as Node | null;
+      const inside = refsRef.current.some((r) => {
+        const el = r.current;
+        if (!el) return false;
+        return path.includes(el) || (target ? el.contains(target) : false);
+      });
+      if (inside) return;
       closeRef.current();
     };
     const onKey = (e: KeyboardEvent) => {

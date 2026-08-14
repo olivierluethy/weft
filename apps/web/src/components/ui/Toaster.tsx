@@ -15,7 +15,7 @@ const barColor: Record<ToastKind, string> = {
 export function Toaster() {
   const { toasts, dismiss } = useToasts();
   return (
-    <div className="fixed bottom-4 right-4 z-[100] flex w-[340px] max-w-[calc(100vw-2rem)] flex-col gap-2">
+    <div className="fixed bottom-4 right-4 z-toast flex w-[340px] max-w-[calc(100vw-2rem)] flex-col gap-2">
       {toasts.map((t) => {
         const Icon = icons[t.kind];
         return (

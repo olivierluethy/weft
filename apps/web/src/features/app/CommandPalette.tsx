@@ -159,7 +159,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-start justify-center bg-[rgba(33,31,28,.36)] p-4 pt-[12vh] backdrop-blur-[2px]"
+      className="fixed inset-0 z-scrim flex items-start justify-center bg-[rgba(33,31,28,.36)] p-4 pt-[12vh] backdrop-blur-[2px]"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
       <div className="card w-full max-w-[600px] animate-[fade_.14s_ease] overflow-hidden shadow-lg">

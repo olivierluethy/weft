@@ -69,7 +69,7 @@ export function Tooltip({
             role="tooltip"
             style={{ position: 'fixed', top: coords.top, left: coords.left }}
             className={cn(
-              'pointer-events-none z-[120] max-w-[220px] animate-[fade_.1s_ease] rounded-md',
+              'pointer-events-none z-tooltip max-w-[220px] animate-[fade_.1s_ease] rounded-md',
               'bg-ink px-2 py-1 text-2xs font-medium text-paper shadow-md',
             )}
           >

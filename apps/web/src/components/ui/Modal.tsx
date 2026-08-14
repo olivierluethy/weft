@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Portal } from './Portal';
 
 export function Modal({
   open,
@@ -28,8 +29,9 @@ export function Modal({
   const widths = { sm: 'max-w-[420px]', md: 'max-w-[560px]', lg: 'max-w-[720px]' };
 
   return (
+    <Portal>
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[rgba(33,31,28,.36)] p-4 backdrop-blur-[2px] sm:items-center"
+      className="fixed inset-0 z-scrim flex items-start justify-center overflow-y-auto bg-[rgba(33,31,28,.36)] p-4 backdrop-blur-[2px] sm:items-center"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
@@ -59,5 +61,6 @@ export function Modal({
         )}
       </div>
     </div>
+    </Portal>
   );
 }

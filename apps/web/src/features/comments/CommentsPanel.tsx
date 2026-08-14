@@ -6,6 +6,7 @@ import type { PublicUser } from '@weft/shared';
 import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { Avatar } from '@/components/ui/Avatar';
+import { Portal } from '@/components/ui/Portal';
 import { cn } from '@/lib/utils';
 
 interface Comment {
@@ -57,7 +58,8 @@ export function CommentsPanel({ pageId, onClose }: { pageId: string; onClose: ()
   };
 
   return (
-    <div className="fixed right-0 top-0 z-40 flex h-full w-[340px] max-w-[calc(100vw-1rem)] flex-col border-l border-line bg-surface shadow-lg animate-[slidein_.18s_ease]">
+    <Portal>
+    <div className="fixed right-0 top-0 z-scrim flex h-full w-[340px] max-w-[calc(100vw-1rem)] flex-col border-l border-line bg-surface shadow-lg animate-[slidein_.18s_ease]">
       <div className="flex items-center justify-between border-b border-line px-4 py-3">
         <div className="flex items-center gap-2">
           <MessageSquare size={16} className="text-thread" />
@@ -155,5 +157,6 @@ export function CommentsPanel({ pageId, onClose }: { pageId: string; onClose: ()
         </div>
       </div>
     </div>
+    </Portal>
   );
 }

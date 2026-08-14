@@ -186,6 +186,18 @@
 }
 
 @layer components {
+  /* When the sidebar is collapsed on desktop, the whole sidebar is removed
+     from flow and the only remaining chrome is the floating "open sidebar"
+     button (fixed, top-left). Without this, that button overlaps the page
+     header's left controls — the breadcrumb / path bar and the compact page
+     icon + title once scrolled — which read as "cut off / mispositioned".
+     Reserve room for the button so the current-page context stays fully
+     visible. Scoped to the collapsed state, so an expanded sidebar keeps the
+     tight md:px-4 gutter. */
+  .wf-sidebar-collapsed .wf-page-header-bar {
+    padding-left: 3.25rem;
+  }
+
   /* The weave: diagonal thread texture used for coverless page headers. */
   .weave-texture {
     background-image:

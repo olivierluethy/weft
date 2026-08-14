@@ -304,6 +304,47 @@ Placeholder `--ink-faint`. Labels `text-xs` `--ink-muted` uppercase tracking `0.
 `shadow-md` (palette `shadow-lg`). Item height 32px, hover `--sunk`, active `--thread-soft`
 with `--thread` text. Section headers `text-2xs` `--ink-faint` uppercase.
 
+### 6.1 Overlay & stacking architecture
+
+Every floating surface — menus, popovers, dropdowns, context menus, tooltips, toasts,
+modals, full-screen panels and the side peek — is rendered through a **portal to
+`document.body`** (`components/ui/Portal.tsx`). This is not decoration: a floating panel
+rendered inline inherits the stacking context of its ancestors, and any `position: sticky`,
+`backdrop-filter`/`filter`, `transform`, `opacity < 1` or `z-index` on the way up traps it
+below sibling chrome (this was the real cause of the sidebar `＋`/`⋯` bleeding over the tag
+popover and the History panel). Portalling lifts each overlay to the root stacking context
+where a single, documented z-scale decides order:
+
+| Token (Tailwind `z-*`) | Value       | Layer                                                   |
+| ---------------------- | ----------- | ------------------------------------------------------- |
+| `z-header`             | 20          | in-flow sticky page/section headers                     |
+| `z-scrim-low`          | 30          | mobile sidebar backdrop, floating reopen button         |
+| `z-sidebar`            | 40          | mobile sidebar drawer                                    |
+| `z-peek`               | 60          | docked side-peek panel + its scrim                      |
+| _(reserved)_           | 2000–4000   | **BlockNote in-editor floating UI** — see note below    |
+| `z-scrim`              | 5000        | modals, dialogs, full-screen panels (portalled)         |
+| `z-overlay`            | 6000        | menus, popovers, dropdowns, context menus (portalled)   |
+| `z-tooltip`            | 6100        | tooltips (portalled)                                     |
+| `z-toast`              | 6200        | toasts (portalled) — always on top                      |
+
+**Reserved band 2000–4000 (BlockNote).** The editor library portals its *own* affordances
+to `<body>` at hard-coded z-index — the `＋`/⠿ side menu and slash suggestion menu at 2000,
+the formatting toolbar at 3000, one element at 4000. Those are **content-level** affordances,
+so every app overlay must sit *above* the whole band; otherwise the editor's hover handles
+bleed over an app popover (this was the real cause of the page **emoji picker** appearing
+under the block `＋`/⠿ controls — not a missing z-index on the picker, but the app-overlay
+band starting at 1000, *below* BlockNote's 2000). The app band therefore starts at `z-scrim`
+5000. Do not place any app overlay inside 2000–4000.
+
+Floating overlays sit **above** scrims so a menu opened from inside a modal still lands on
+top. Never introduce a raw `z-[n]`; pick a layer. **Positioning** is shared: anchored
+overlays use `useAnchoredPosition` (`components/ui/floating.ts`) — `position: fixed`,
+open below the trigger, flip above when there isn't room, shift horizontally to stay in
+the viewport with an 8px margin, and re-measure on scroll/resize. **Dismissal** is shared
+via `useDismiss`: Escape and outside-click (pointer outside both trigger and panel) close
+every overlay, with the same `fade .12s` entrance. Same shadow (`shadow-md`), same radius
+(`rounded-md`), same motion everywhere.
+
 **Sidebar** — `--sunk` background, `280px` default (resizable). Row height 30px, `text-sm`.
 Hover `--surface`; active page `--thread-soft` fill + `--thread` text + 2px `--thread` left bar.
 Favourites use a `--madder` star. The sidebar fills the full viewport height as a flex
@@ -340,6 +381,17 @@ tracks the child page live (renaming the child updates the block). Clicking navi
 the child. It is a void block (`contentEditable=false`) — same interaction language as the
 inline `@`-mention chip, promoted to block level.
 
+**Empty-page quick actions** — a getting-started affordance on a blank, editable page.
+It is **editor UI, never a document block**: rendered as a `contentEditable=false` sibling
+of the ProseMirror root, so it can't be typed into, saved, exported, or copied, and it
+disappears the instant the page gains real content (or the user picks "Text" / starts
+typing). It anchors just below the first line — complementing BlockNote's inline
+placeholder and the "/" menu rather than replacing them. A dezent hint line ("Start
+building — pick a block, press `/` for all, or just type."), then a compact 2/4-column grid
+of ~8 curated cards (`--surface`, `1px --line`, `rounded-md`, icon → `--thread` on hover)
+ordered write → structure → data. Each card runs the **real** insert verb from the shared
+block registry — the same one "/" uses — so it genuinely inserts the block.
+
 **Cards / callouts** — `--surface`, `1px --line`, `rounded-md`. Callouts tint their
 background from the chosen colour at ~10% and border at ~24%.
 
@@ -348,6 +400,14 @@ status colour. Auto-dismiss 4s; errors persist until dismissed.
 
 **Modals** — centred, `--surface`, `rounded-lg`, `shadow-lg`, max-width per use (420 / 560 /
 720). Backdrop `rgba(33,31,28,.36)` with slight blur. Esc + backdrop-click to close.
+
+**Side peek** — a right-docked panel (`z-peek`) that previews another page without leaving
+the current one. `--paper` background, `1px --line` left border, `shadow-lg`, slides in
+(`slidein .2s`). ~46vw on desktop (clamped 440–760px), full-width on mobile with a tap-scrim.
+**Non-modal on desktop** — the main view stays visible and scrollable; it closes on Esc, the
+✕, or (mobile) the scrim. Content is rendered **read-only** via the same static `toHtml`
+renderer the public share view uses, so a peek never opens a second collaborative editor
+session. Header offers "Open as full page" and "Open in new tab".
 
 **Path bar** — Explorer-style breadcrumb at the top of a page. Segments are `text-sm`
 `--ink-muted` chips separated by a `/` in `--ink-faint`; the last (current) segment is

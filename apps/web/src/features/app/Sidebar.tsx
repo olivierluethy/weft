@@ -6,6 +6,7 @@ import {
   Trash2,
   Share2,
   Network,
+  Activity,
   Settings,
   ChevronsUpDown,
   Check,
@@ -29,7 +30,7 @@ import { Menu } from '@/components/ui/Menu';
 import { Popover } from '@/components/ui/Popover';
 import { TemplatePicker } from './TemplatePicker';
 import { useCreatePage } from './useCreatePage';
-import { PageTree } from './PageTree';
+import { PagesSection } from './PagesSection';
 import { toast } from '@/lib/toast';
 import { useState } from 'react';
 
@@ -37,12 +38,14 @@ export function Sidebar({
   width,
   onWidthChange,
   onOpenPalette,
+  onOpenPeek,
   mobile = false,
   onCollapse,
 }: {
   width: number;
   onWidthChange: (w: number) => void;
   onOpenPalette: () => void;
+  onOpenPeek?: (pageId: string) => void;
   mobile?: boolean;
   onCollapse?: () => void;
 }) {
@@ -195,14 +198,12 @@ export function Sidebar({
           </div>
         )}
 
-        <p className="px-2 pb-1 pt-2 text-2xs font-semibold uppercase tracking-wide text-ink-faint">
-          Pages
-        </p>
-        <PageTree nodes={tree ?? []} />
+        <PagesSection nodes={tree ?? []} onOpenPeek={onOpenPeek} />
       </div>
 
       {/* Footer nav */}
       <div className="border-t border-line px-2 py-2">
+        <FooterLink icon={<Activity size={15} />} label="Activity" onClick={() => navigate('/activity')} />
         <FooterLink icon={<Network size={15} />} label="Graph view" onClick={() => navigate('/graph')} />
         <FooterLink icon={<Users size={15} />} label="Members" onClick={() => navigate('/members')} />
         <FooterLink icon={<Trash2 size={15} />} label="Trash" onClick={() => navigate('/trash')} />

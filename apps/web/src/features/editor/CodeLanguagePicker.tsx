@@ -174,7 +174,7 @@ export function CodeLanguagePicker({ editor }: { editor: any }) {
         left: coords?.left ?? 0,
         visibility: coords ? 'visible' : 'hidden',
       }}
-      className="z-[100] flex max-h-[min(320px,60vh)] w-56 flex-col overflow-hidden rounded-md border border-line bg-surface shadow-md animate-[fade_.12s_ease]"
+      className="z-overlay flex max-h-[min(320px,60vh)] w-56 flex-col overflow-hidden rounded-md border border-line bg-surface shadow-md animate-[fade_.12s_ease]"
     >
       <div className="flex items-center gap-1.5 border-b border-line px-2 py-1.5">
         <Search size={13} className="shrink-0 text-ink-faint" />

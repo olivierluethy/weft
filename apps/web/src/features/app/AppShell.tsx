@@ -12,7 +12,11 @@ import { Spinner } from '@/components/ui/Spinner';
 import { PageView } from '@/features/editor/PageView';
 import { HomeView } from './HomeView';
 
+const SidePeek = lazy(() =>
+  import('@/features/editor/SidePeek').then((m) => ({ default: m.SidePeek })),
+);
 const SettingsView = lazy(() => import('@/features/settings/SettingsView'));
+const ActivityView = lazy(() => import('@/features/history/ActivityView'));
 const GraphView = lazy(() => import('@/features/graph/GraphView'));
 const TrashView = lazy(() => import('@/features/app/TrashView'));
 const MembersView = lazy(() => import('@/features/workspace/MembersView'));
@@ -28,6 +32,7 @@ function Shell() {
     () => localStorage.getItem('weft-sidebar-collapsed') === '1',
   );
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [peekId, setPeekId] = useState<string | null>(null);
   const isMobile = useIsMobile();
   const location = useLocation();
 
@@ -36,8 +41,11 @@ function Shell() {
     localStorage.setItem('weft-sidebar-collapsed', v ? '1' : '0');
   };
 
-  // Close the mobile drawer whenever the route changes.
-  useEffect(() => setMobileOpen(false), [location.pathname]);
+  // Close the mobile drawer + any side peek whenever the route changes.
+  useEffect(() => {
+    setMobileOpen(false);
+    setPeekId(null);
+  }, [location.pathname]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -53,7 +61,14 @@ function Shell() {
   const sidebarVisible = isMobile ? mobileOpen : !collapsed;
 
   return (
-    <div className="flex h-full overflow-hidden bg-paper">
+    <div
+      className={cn(
+        'flex h-full overflow-hidden bg-paper',
+        // Desktop-only: sidebar removed from flow → reserve header space for the
+        // floating reopen button (see .wf-sidebar-collapsed in index.css).
+        !isMobile && !sidebarVisible && 'wf-sidebar-collapsed',
+      )}
+    >
       {/* Workspace + page global CSS injected live and scoped by GlobalStyles. */}
       <GlobalStyles css={meta?.workspace.globalCss ?? null} scope="workspace" />
 
@@ -80,6 +95,7 @@ function Shell() {
             localStorage.setItem('weft-sidebar-w', String(w));
           }}
           onOpenPalette={() => setPaletteOpen(true)}
+          onOpenPeek={setPeekId}
           mobile={isMobile}
           onCollapse={() => (isMobile ? setMobileOpen(false) : setCollapsedPersist(true))}
         />
@@ -109,6 +125,7 @@ function Shell() {
             <Route index element={<HomeView />} />
             <Route path="p/:pageId" element={<PageView />} />
             <Route path="w/:workspaceId" element={<HomeView />} />
+            <Route path="activity" element={<ActivityView />} />
             <Route path="settings/*" element={<SettingsView />} />
             <Route path="graph" element={<GraphView />} />
             <Route path="trash" element={<TrashView />} />
@@ -119,6 +136,12 @@ function Shell() {
       </main>
 
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+
+      {peekId && (
+        <Suspense fallback={null}>
+          <SidePeek pageId={peekId} onClose={() => setPeekId(null)} />
+        </Suspense>
+      )}
     </div>
   );
 }

@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, Copy, Pencil, Check, X } from 'lucide-react';
+import { ChevronRight, Check, X } from 'lucide-react';
 import type { PageTreeNode } from '@weft/shared';
 import { useTree } from '@/lib/queries';
 import { useWorkspace } from '@/features/app/workspace';
 import { PageIcon } from './pickers/IconPicker';
-import { toast } from '@/lib/toast';
 import { cn } from '@/lib/utils';
 
 interface Crumb {
@@ -22,15 +21,25 @@ export function PathBar({
   breadcrumbs,
   editable = false,
   onRenameCurrent,
+  editing: editingProp,
+  onEditingChange,
 }: {
   breadcrumbs: Crumb[];
   editable?: boolean;
   onRenameCurrent?: (title: string) => void;
+  /** Controlled path-edit mode. When supplied, the parent (PageHeader) owns it
+   * so "Edit path" can be triggered from a persistent header control at any
+   * scroll depth. Falls back to internal state when uncontrolled. */
+  editing?: boolean;
+  onEditingChange?: (v: boolean) => void;
 }) {
   const navigate = useNavigate();
   const { workspaceId } = useWorkspace();
   const { data: tree } = useTree(workspaceId);
-  const [editing, setEditing] = useState(false);
+  const [internalEditing, setInternalEditing] = useState(false);
+  const editing = editingProp ?? internalEditing;
+  const setEditing = (v: boolean) =>
+    onEditingChange ? onEditingChange(v) : setInternalEditing(v);
   const [value, setValue] = useState('');
   const [error, setError] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -104,11 +113,6 @@ export function PathBar({
     }
     setEditing(false);
     navigate(`/p/${id}`);
-  };
-
-  const copy = () => {
-    void navigator.clipboard.writeText(pathString);
-    toast.success('Path copied');
   };
 
   if (editing) {
@@ -206,25 +210,9 @@ export function PathBar({
           );
         })}
       </nav>
-      {/* Copy / Edit path — permanently visible (previously opacity-0 until hover). */}
-      <div className="flex shrink-0 items-center gap-0.5">
-        <button
-          onClick={copy}
-          title="Copy path"
-          aria-label="Copy path"
-          className="rounded-md p-1 text-ink-faint transition-colors hover:bg-sunk hover:text-ink"
-        >
-          <Copy size={13} />
-        </button>
-        <button
-          onClick={() => setEditing(true)}
-          title="Edit path"
-          aria-label="Edit path"
-          className="rounded-md p-1 text-ink-faint transition-colors hover:bg-sunk hover:text-ink"
-        >
-          <Pencil size={13} />
-        </button>
-      </div>
+      {/* Copy / Edit path controls now live in PageHeader as a persistent cluster
+          so they stay reachable in the compact (scrolled) header too — see
+          PageHeader's path-actions cluster. */}
     </div>
   );
 }

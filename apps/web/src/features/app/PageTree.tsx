@@ -15,7 +15,17 @@ interface TreeItem extends PageTreeNode {
   depth: number;
 }
 
-function buildTree(flat: PageTreeNode[]): TreeItem[] {
+/** How the tree is ordered. `manual` honours the stored position (and enables
+ * drag-to-reorder); the others are read-only orderings. */
+export type SortMode = 'manual' | 'title' | 'edited';
+
+const COMPARATORS: Record<SortMode, (a: PageTreeNode, b: PageTreeNode) => number> = {
+  manual: (a, b) => a.position - b.position,
+  title: (a, b) => (a.title || 'Untitled').localeCompare(b.title || 'Untitled'),
+  edited: (a, b) => b.updatedAt.localeCompare(a.updatedAt),
+};
+
+function buildTree(flat: PageTreeNode[], sort: SortMode): TreeItem[] {
   const byId = new Map<string, TreeItem>();
   flat.forEach((n) => byId.set(n.id, { ...n, children: [], depth: 0 }));
   const roots: TreeItem[] = [];
@@ -26,8 +36,9 @@ function buildTree(flat: PageTreeNode[]): TreeItem[] {
       roots.push(node);
     }
   }
+  const cmp = COMPARATORS[sort];
   const sortRec = (items: TreeItem[], depth: number) => {
-    items.sort((a, b) => a.position - b.position);
+    items.sort(cmp);
     items.forEach((i) => {
       i.depth = depth;
       sortRec(i.children, depth + 1);
@@ -39,12 +50,28 @@ function buildTree(flat: PageTreeNode[]): TreeItem[] {
 
 type DropPos = 'before' | 'after' | 'inside';
 
-export function PageTree({ nodes, filter }: { nodes: PageTreeNode[]; filter?: (n: PageTreeNode) => boolean }) {
-  const tree = useMemo(() => buildTree(filter ? nodes.filter(filter) : nodes), [nodes, filter]);
+export function PageTree({
+  nodes,
+  filter,
+  sortMode = 'manual',
+  onOpenPeek,
+}: {
+  nodes: PageTreeNode[];
+  filter?: (n: PageTreeNode) => boolean;
+  sortMode?: SortMode;
+  /** When provided, rows offer "Open in side peek". */
+  onOpenPeek?: (pageId: string) => void;
+}) {
+  const tree = useMemo(
+    () => buildTree(filter ? nodes.filter(filter) : nodes, sortMode),
+    [nodes, filter, sortMode],
+  );
+  const canReorder = sortMode === 'manual';
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
   const [dragId, setDragId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<{ id: string; pos: DropPos } | null>(null);
   const [hoverSubtree, setHoverSubtree] = useState<string | null>(null);
+  const [renaming, setRenaming] = useState<{ id: string; value: string } | null>(null);
   const navigate = useNavigate();
   const { pageId: activeId } = useParams();
   const { workspaceId } = useWorkspace();
@@ -104,6 +131,18 @@ export function PageTree({ nodes, filter }: { nodes: PageTreeNode[]; filter?: (n
     setDropTarget(null);
   };
 
+  const commitRename = async () => {
+    if (!renaming) return;
+    const { id, value } = renaming;
+    setRenaming(null);
+    const next = value.trim();
+    const original = nodes.find((n) => n.id === id)?.title ?? '';
+    if (next === original) return;
+    await api.patch(`/pages/${id}`, { title: next }).catch(() => undefined);
+    await invalidate.tree(workspaceId);
+    invalidate.page(id);
+  };
+
   const renderRow = (item: TreeItem) => {
     const isCollapsed = collapsed.has(item.id);
     const isActive = item.id === activeId;
@@ -112,18 +151,26 @@ export function PageTree({ nodes, filter }: { nodes: PageTreeNode[]; filter?: (n
     return (
       <div key={item.id}>
         <div
-          draggable
-          onDragStart={() => setDragId(item.id)}
-          onDragEnd={reset}
-          onDragOver={(e) => {
-            e.preventDefault();
-            const r = e.currentTarget.getBoundingClientRect();
-            const y = (e.clientY - r.top) / r.height;
-            const pos: DropPos = y < 0.28 ? 'before' : y > 0.72 ? 'after' : 'inside';
-            setDropTarget({ id: item.id, pos });
+          draggable={canReorder}
+          onDragStart={canReorder ? () => setDragId(item.id) : undefined}
+          onDragEnd={canReorder ? reset : undefined}
+          onDragOver={
+            canReorder
+              ? (e) => {
+                  e.preventDefault();
+                  const r = e.currentTarget.getBoundingClientRect();
+                  const y = (e.clientY - r.top) / r.height;
+                  const pos: DropPos = y < 0.28 ? 'before' : y > 0.72 ? 'after' : 'inside';
+                  setDropTarget({ id: item.id, pos });
+                }
+              : undefined
+          }
+          onDrop={canReorder ? () => onDrop(item) : undefined}
+          onClick={(e) => {
+            // Ignore the clicks that compose a double-click (rename gesture).
+            if (e.detail > 1 || renaming?.id === item.id) return;
+            navigate(`/p/${item.id}`);
           }}
-          onDrop={() => onDrop(item)}
-          onClick={() => navigate(`/p/${item.id}`)}
           onMouseEnter={() => setHoverSubtree(item.id)}
           onMouseLeave={() => setHoverSubtree(null)}
           className={cn(
@@ -199,7 +246,40 @@ export function PageTree({ nodes, filter }: { nodes: PageTreeNode[]; filter?: (n
             )}
           </Popover>
 
-          <span className="flex-1 truncate">{item.title || 'Untitled'}</span>
+          {renaming?.id === item.id ? (
+            <input
+              autoFocus
+              value={renaming.value}
+              onChange={(e) => setRenaming({ id: item.id, value: e.target.value })}
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => {
+                e.stopPropagation();
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  void commitRename();
+                } else if (e.key === 'Escape') {
+                  e.preventDefault();
+                  setRenaming(null);
+                }
+              }}
+              onBlur={() => void commitRename()}
+              spellCheck={false}
+              className="flex-1 rounded-sm bg-surface px-1 py-0.5 text-sm text-ink outline-none ring-1 ring-thread focus-visible:shadow-none"
+            />
+          ) : (
+            <span
+              className="flex-1 truncate"
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                setRenaming({ id: item.id, value: item.title });
+              }}
+              // Full name on hover so long, truncated titles stay legible;
+              // rename stays discoverable via double-click and the row's ⋯ menu.
+              title={item.title || 'Untitled'}
+            >
+              {item.title || 'Untitled'}
+            </span>
+          )}
 
           {item.isLocked && <Lock size={11} className="shrink-0 text-ink-faint" />}
           {item.isFavorite && <Star size={11} className="shrink-0 fill-madder text-madder" />}
@@ -210,6 +290,8 @@ export function PageTree({ nodes, filter }: { nodes: PageTreeNode[]; filter?: (n
               title={item.title}
               isFavorite={item.isFavorite}
               isLocked={item.isLocked}
+              onRename={() => setRenaming({ id: item.id, value: item.title })}
+              onOpenPeek={onOpenPeek ? () => onOpenPeek(item.id) : undefined}
             >
               <span
                 aria-label={`More actions for ${item.title || 'Untitled'}`}

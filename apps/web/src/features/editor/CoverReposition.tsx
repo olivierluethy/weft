@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { Move, ZoomIn, ZoomOut } from 'lucide-react';
 import { COVER_HEIGHT } from '@weft/shared';
 import { Button } from '@/components/ui/Button';
+import { Portal } from '@/components/ui/Portal';
 import { coverImageStyle } from './cover';
 
 const clamp = (n: number, min = 0, max = 100) => Math.min(max, Math.max(min, n));
@@ -55,8 +56,9 @@ export function CoverReposition({
   };
 
   return (
+    <Portal>
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(33,31,28,.5)] p-4 backdrop-blur-[2px]"
+      className="fixed inset-0 z-scrim flex items-center justify-center bg-[rgba(33,31,28,.5)] p-4 backdrop-blur-[2px]"
       onMouseDown={(e) => e.target === e.currentTarget && onCancel()}
     >
       <div className="card w-full max-w-[720px] overflow-hidden shadow-lg">
@@ -121,5 +123,6 @@ export function CoverReposition({
         </div>
       </div>
     </div>
+    </Portal>
   );
 }

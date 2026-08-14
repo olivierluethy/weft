@@ -35,6 +35,7 @@ import { SlashMenu } from './SlashMenu';
 import { MarqueeSelect } from './MarqueeSelect';
 import { CodeLanguagePicker } from './CodeLanguagePicker';
 import { WeftFormattingToolbar } from './FormattingToolbar';
+import { EmptyState, isBlocksEmpty } from './EmptyState';
 import { extractHeadings, type OutlineHeading } from './outline';
 
 const colorFor = (id: string) => `hsl(${hashHue(id)} 55% 45%)`;
@@ -304,6 +305,7 @@ export function Editor({
       // `latest` here too — this is the reference point "no edits since open".
       latest.current = editor.document;
       openedBaseline.current = JSON.stringify(editor.document);
+      setDocEmpty(isBlocksEmpty(editor.document));
       onStats?.(computeStats(editor.document));
       onHeadings?.(extractHeadings(editor.document));
     };
@@ -341,6 +343,7 @@ export function Editor({
   const handleChange = () => {
     const docJson = editor.document;
     latest.current = docJson;
+    setDocEmpty(isBlocksEmpty(docJson));
     onStats?.(computeStats(docJson));
     onHeadings?.(extractHeadings(docJson));
 
@@ -400,6 +403,13 @@ export function Editor({
   const [convertReq, setConvertReq] = useState<
     { block: any; def: BlockTypeDef; childId: string; title: string } | null
   >(null);
+
+  // Empty-page quick-start affordance. `docEmpty` tracks whether the document is
+  // blank; `dismissedEmpty` lets the user wave it away ("Text" / start typing).
+  // Both are pure UI — nothing here is written to the document.
+  const [docEmpty, setDocEmpty] = useState(() => isBlocksEmpty(initialContent));
+  const [dismissedEmpty, setDismissedEmpty] = useState(false);
+  const showEmptyState = editable && docEmpty && !dismissedEmpty;
 
   // Replace a Page block (`pageLink`) with the chosen block type, carrying the
   // page's title as the new block's text, and move the now-unlinked child page
@@ -466,6 +476,10 @@ export function Editor({
     <>
     {editable && <MarqueeSelect editor={editor} />}
     {editable && <CodeLanguagePicker editor={editor} />}
+    <div className="relative">
+    {showEmptyState && (
+      <EmptyState editor={editor} ctx={blockCtx} onDismiss={() => setDismissedEmpty(true)} />
+    )}
     <BlockNoteView
       editor={editor}
       editable={editable}
@@ -508,6 +522,7 @@ export function Editor({
         />
       )}
     </BlockNoteView>
+    </div>
     </>
   );
 }

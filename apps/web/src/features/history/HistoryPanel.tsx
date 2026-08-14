@@ -4,6 +4,7 @@ import { diffWords } from 'diff';
 import { format, isToday, isYesterday } from 'date-fns';
 import { History, RotateCcw, Download, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { Portal } from '@/components/ui/Portal';
 import { api } from '@/lib/api';
 import { toast } from '@/lib/toast';
 import { cn } from '@/lib/utils';
@@ -147,8 +148,9 @@ export function HistoryPanel({
   };
 
   return (
+    <Portal>
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(33,31,28,.36)] p-4 backdrop-blur-[2px]"
+      className="fixed inset-0 z-scrim flex items-center justify-center bg-[rgba(33,31,28,.36)] p-4 backdrop-blur-[2px]"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
       {/* Fixed-height panel: header stays pinned, the two panes scroll internally. */}
@@ -369,5 +371,6 @@ export function HistoryPanel({
         </div>
       </div>
     </div>
+    </Portal>
   );
 }

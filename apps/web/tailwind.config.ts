@@ -58,6 +58,32 @@ const config: Config = {
         standard: 'cubic-bezier(.2,.6,.2,1)',
         enter: 'cubic-bezier(.4,0,.2,1)',
       },
+      // Single, documented stacking scale (docs/STYLEGUIDE.md §6.1). Every
+      // overlay uses one of these named layers instead of an ad-hoc `z-[n]`,
+      // so layering is decided once and stays consistent. Floating layers
+      // (menus/popovers/tooltips/toasts) live far above document chrome and,
+      // crucially, are all rendered through a portal to <body> so no
+      // stacking context (a `sticky`/`backdrop-blur` bar, a `transform`
+      // ancestor) can ever trap them below sibling chrome.
+      //
+      // RESERVED BAND 2000–4000 — BlockNote's in-editor floating UI. The editor
+      // library portals its OWN affordances to <body> at hard-coded z-index
+      // (side menu / suggestion menu 2000, formatting toolbar 3000, one element
+      // 4000). Those are content-level affordances, so every APP overlay below
+      // (scrim upward) must sit ABOVE this band — otherwise the editor's hover
+      // handles (the "+"/⠿ side menu) bleed over app popovers like the page
+      // emoji picker. Do NOT place app overlays inside 2000–4000.
+      zIndex: {
+        header: '20', // in-flow sticky page/section headers
+        'scrim-low': '30', // mobile sidebar backdrop, floating reopen button
+        sidebar: '40', // mobile sidebar drawer
+        peek: '60', // docked side-peek panel + its scrim
+        // — reserved 2000–4000: BlockNote editor floating UI (see note above) —
+        scrim: '5000', // modals, dialogs, full-screen panels (portalled)
+        overlay: '6000', // menus, popovers, dropdowns, context menus (portalled)
+        tooltip: '6100', // tooltips (portalled)
+        toast: '6200', // toasts (portalled) — always on top
+      },
     },
   },
   plugins: [],

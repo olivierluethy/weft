@@ -302,7 +302,12 @@ Placeholder `--ink-faint`. Labels `text-xs` `--ink-muted` uppercase tracking `0.
 
 **Menus / popovers / command palette** — `--surface`, `1px --line`, `rounded-md`,
 `shadow-md` (palette `shadow-lg`). Item height 32px, hover `--sunk`, active `--thread-soft`
-with `--thread` text. Section headers `text-2xs` `--ink-faint` uppercase.
+with `--thread` text. Section headers `text-2xs` `--ink-faint` uppercase. The **search
+palette's focus state** is on the whole surface, not the raw input: on `:focus-within` the
+card lifts (a softer, deeper shadow) and gains a subtle `--thread/25` ring, the search icon
+shifts to `--thread`, and the field divider tints `--thread/30` — a premium focus that reads
+as part of the design system, never a browser input outline. The trigger button (sidebar
+Search) uses a `--thread-soft` focus halo, matching the app focus language.
 
 ### 6.1 Overlay & stacking architecture
 

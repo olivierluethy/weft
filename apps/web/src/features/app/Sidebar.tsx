@@ -138,9 +138,9 @@ export function Sidebar({
       <div className="flex items-center gap-1 px-3 pt-2">
         <button
           onClick={onOpenPalette}
-          className="flex flex-1 items-center gap-2 rounded border border-line bg-surface px-2.5 py-1.5 text-sm text-ink-faint transition hover:border-line-strong"
+          className="group flex flex-1 items-center gap-2 rounded-md border border-line bg-surface px-2.5 py-1.5 text-sm text-ink-faint transition-colors hover:border-line-strong hover:text-ink-muted focus-visible:border-thread/40 focus-visible:text-ink-muted focus-visible:shadow-[0_0_0_3px_var(--thread-soft)] focus-visible:outline-none"
         >
-          <Search size={14} />
+          <Search size={14} className="transition-colors group-hover:text-ink-muted" />
           <span className="flex-1 text-left">Search</span>
           <span className="kbd">⌘K</span>
         </button>

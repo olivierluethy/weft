@@ -8,6 +8,14 @@
 
 Nested pages · block editor · real-time collaboration · version history · graph view — all on your machine, in one command.
 
+<p>
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue.svg"></a>
+  <img alt="React" src="https://img.shields.io/badge/React-20232A?logo=react&logoColor=61DAFB">
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white">
+  <img alt="Fastify" src="https://img.shields.io/badge/Fastify-000000?logo=fastify&logoColor=white">
+  <img alt="Prisma" src="https://img.shields.io/badge/Prisma-2D3748?logo=prisma&logoColor=white">
+</p>
+
 </div>
 
 ---
@@ -116,3 +124,14 @@ Fastify · Prisma · SQLite · argon2 · Openverse · react-force-graph.
 
 The visual system is documented in [`docs/STYLEGUIDE.md`](docs/STYLEGUIDE.md) and is the
 source of truth for every colour, type and spacing decision.
+
+---
+
+## License
+
+Released under the [MIT License](LICENSE) © 2026 Olivier Lüthy. You're free to use, modify and distribute this
+software, including commercially, as long as the copyright notice and license are included.
+
+## Author
+
+Built by **Olivier Lüthy** — [GitHub](https://github.com/olivierluethy).
